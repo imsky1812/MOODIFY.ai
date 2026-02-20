@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOODIFY.ai</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="topbar">
+    <h2>MOODIFY.ai</h2>
+    <div id="scoreBox">
+        Wellbeing: <span id="score">--</span>%
+    </div>
+</div>
+
+<div id="chat-container">
+    <div id="chat"></div>
+
+    <div id="controls">
+
+    <button type="button" class="iconBtn" id="cameraBtn" title="Open camera">
+        <img src="/static/camera.svg" alt="Camera">
+    </button>
+
+    <button type="button" class="iconBtn" id="voiceBtn" title="Start voice input">
+        <img src="/static/mic.svg" alt="Microphone">
+    </button>
+
+    <input id="userInput" placeholder="Share how you're feeling..."/>
+
+    <button type="button" id="sendBtn" title="Send message">
+        <img src="/static/send.svg" id="sendIcon" alt="Send">
+    </button>
+
+</div>
+
+<div id="voiceModal" class="voiceModal hidden">
+
+    <div class="voiceBox">
+
+        <h3>🎙 Voice Mode</h3>
+
+        <div id="voiceStatus">Tap Start to Speak</div>
+
+        <div id="voiceIndicator" class="indicator hidden">
+            🔊
+        </div>
+
+        <button id="startVoiceBtn">Start</button>
+        <button id="closeVoiceBtn">Exit</button>
+
+        <p class="exitHint">Press Q to exit voice assistant</p>
+
+    </div>
+
+</div>
+
+</div>
+
+<script src="/static/script.js"></script>
+</body>
+</html>
