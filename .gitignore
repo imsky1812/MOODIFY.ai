@@ -1,0 +1,50 @@
+# Python
+
+**pycache**/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+
+venv/
+env/
+.moodify_env/
+.moodify_env
+.venv/
+
+# dotenv
+
+.env
+
+# system files
+
+.DS_Store
+Thumbs.db
+
+# IDE
+
+.vscode/
+.idea/
+
+# logs
+
+*.log
+
+# python build
+
+build/
+dist/
+*.egg-info/
+
+# cache
+
+.cache/
+
+# node (if frontend tools added later)
+
+node_modules/
+
+# OS files
+
+*.swp
