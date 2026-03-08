@@ -6,7 +6,6 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green?logo=fastapi)
 ![Spotify](https://img.shields.io/badge/Spotify-Web%20SDK-1DB954?logo=spotify)
 ![AI](https://img.shields.io/badge/AI-Groq%20LLM-orange)
-![License](https://img.shields.io/badge/License-MIT-purple)
 
 ---
 
