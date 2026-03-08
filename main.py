@@ -1,35 +1,28 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi import Request
+from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
+from pydantic import BaseModel
 import subprocess
 import sys
-from pydantic import BaseModel
-
-from fastapi.responses import (
-    FileResponse, 
-    RedirectResponse,
-    JSONResponse
-
-)
 
 from spotify_service import (
-    search_track, 
-    get_recommendations_by_mood, 
-    sp,
-    auth_manager
+    search_track,
+    get_recommendations_by_mood,
+    auth_manager,
+    get_valid_token
 )
-
 
 from llm_response import (
     detect_crisis_intent,
     generate_support_message,
     calculate_wellbeing,
     generate_music_query,
-    detect_music_intent
+    detect_music_intent,
 )
 
 from text_emotion import detect_text_emotion
 from mental_state import calculate_stress_score
+
 from conversation_memory import (
     add_user_message,
     get_history,
@@ -44,6 +37,21 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 voice_session_active = False
+
+
+# ================= HELPERS =================
+
+def format_tracks(tracks):
+    """Convert Spotify tracks to frontend format."""
+    return [
+        {
+            "name": t["name"],
+            "artist": t["artists"][0]["name"],
+            "uri": t["uri"],
+            "image": t["album"]["images"][0]["url"],
+        }
+        for t in tracks
+    ]
 
 
 # ================= ROOT =================
@@ -71,27 +79,27 @@ def analyze_text(data: TextInput):
             "risk_level": "LOW",
         }
 
-    # 1️⃣ Detect crisis
+    # Crisis detection
     risk = detect_crisis_intent(user_text)
 
-    # 2️⃣ Store message
+    # Store conversation
     add_user_message(user_text)
 
-    # 3️⃣ Generate response
     music_query = None
-    
+    command = None
+
+    # AI Music Intent
     if detect_music_intent(user_text):
         music_query = generate_music_query(user_text)
         reply = ""
-    else : reply = generate_support_message(user_text, "neutral")
-
-    command = None
+    else:
+        reply = generate_support_message(user_text, "neutral")
 
     if reply.startswith("COMMAND:"):
         command = reply.replace("COMMAND:", "").strip()
         reply = "Here's something that might help."
 
-    # 4️⃣ Wellbeing logic
+    # Wellbeing calculation
     count = message_count()
     previous_score = get_score()
 
@@ -105,12 +113,11 @@ def analyze_text(data: TextInput):
                 set_score(score)
                 wellbeing = score
             else:
-                # smoothing
                 smooth_score = int(previous_score * 0.7 + score * 0.3)
                 set_score(smooth_score)
                 wellbeing = smooth_score
         else:
-            wellbeing = previous_score if previous_score else "Calculating..."
+            wellbeing = previous_score or "Calculating..."
 
     return {
         "support_message": reply,
@@ -119,7 +126,6 @@ def analyze_text(data: TextInput):
         "wellbeing_score": wellbeing,
         "risk_level": risk,
     }
-    
 
 
 # ================= FACE SUPPORT =================
@@ -132,8 +138,6 @@ class FaceEmotionInput(BaseModel):
 def face_support(data: FaceEmotionInput):
 
     face_emotion = data.emotion
-
-    # No text input in face mode
     text_emotion = "neutral"
 
     score, risk = calculate_stress_score(text_emotion, face_emotion)
@@ -172,11 +176,13 @@ def start_camera():
 def start_voice():
     if not hasattr(app.state, "voice_running") or not app.state.voice_running:
         app.state.voice_running = True
+
         subprocess.Popen(
             [sys.executable, "voice_assistant.py"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
+
     return {"status": "voice started"}
 
 
@@ -186,17 +192,13 @@ def voice_cycle():
     global voice_session_active
     voice_session_active = True
 
+    # Lazy imports (only used when voice enabled)
     from voice_emotion import record_audio, speech_to_text
-    from ai_voice import speak
 
     if not voice_session_active:
         return {"text": "", "reply": ""}
 
     record_audio()
-
-    if not voice_session_active:
-        return {"text": "", "reply": ""}
-
     text = speech_to_text()
 
     if not text:
@@ -204,7 +206,6 @@ def voice_cycle():
 
     emotion = detect_text_emotion(text)
     response = generate_support_message(text, emotion)
-
 
     return {
         "text": text,
@@ -219,7 +220,7 @@ def stop_voice():
     return {"status": "stopped"}
 
 
-# ================= SCORE ROUTES =================
+# ================= SCORE =================
 
 @app.get("/current-score")
 def current_score():
@@ -233,10 +234,7 @@ def current_score():
     if count < 7 and score is None:
         return {"score": "Calculating..."}
 
-    if score is not None:
-        return {"score": score}
-
-    return {"score": "Calculating..."}
+    return {"score": score or "Calculating..."}
 
 
 @app.get("/initial-score")
@@ -252,43 +250,68 @@ def welcome():
     return {"message": greeting}
 
 
-# ================= STARTUP WARMUP =================
+# ================= STARTUP =================
 
 @app.on_event("startup")
 def warmup_llm():
     try:
         generate_support_message("hello", "neutral")
         print("🔥 MOODIFY.ai LLM warmed up")
-    except:
+    except Exception:
         print("⚠️ Warmup skipped")
 
 
-# ================= HEALTH CHECK =================
+# ================= HEALTH =================
 
 @app.post("/chat")
 def chat():
     return {"reply": "Backend working fine"}
 
 
-# =================== SPOTIFY ===================
+
+# ================= SPOTIFY LOGIN =================
 
 @app.get("/spotify-login")
 def spotify_login():
+
     auth_url = auth_manager.get_authorize_url()
+
     return RedirectResponse(auth_url)
 
 
+# ================= SPOTIFY CALLBACK =================
+
+@app.get("/callback")
+def spotify_callback(request: Request):
+
+    code = request.query_params.get("code")
+
+    if not code:
+        return {"error": "Spotify authorization failed"}
+
+    auth_manager.get_access_token(code)
+
+    return RedirectResponse("/")
+
+
+# ================= GET TOKEN =================
+
 @app.get("/spotify-token")
 def spotify_token():
-    token_info = auth_manager.get_cached_token()
 
-    if not token_info:
+    token = get_valid_token()
+
+    if not token:
         return {"error": "Not authenticated"}
 
-    return {"token": token_info["access_token"]}
+    return {"token": token}
+
+
+# ================= SEARCH =================
 
 @app.get("/spotify-search")
 def spotify_search(query: str):
+
     tracks = search_track(query)
 
     return [
@@ -302,55 +325,19 @@ def spotify_search(query: str):
     ]
 
 
-from fastapi.responses import JSONResponse
-from spotify_service import get_recommendations_by_mood
+# ================= RECOMMEND =================
 
 @app.get("/spotify-recommend")
 def spotify_recommend(mood: str):
 
-    try:
-        tracks = get_recommendations_by_mood(mood)
+    tracks = get_recommendations_by_mood(mood)
 
-        if not tracks:
-            return []
-
-        return [
-            {
-                "name": t["name"],
-                "artist": t["artists"][0]["name"],
-                "uri": t["uri"],
-                "image": t["album"]["images"][0]["url"]
-            }
-            for t in tracks
-        ]
-
-    except Exception as e:
-        print("🔥 Spotify Recommend Error:", e)
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
-        
-
-@app.get("/callback")
-def spotify_callback(request: Request):
-    code = request.query_params.get("code")
-
-    if not code:
-        return {"error": "No code received"}
-
-    # Let spotipy handle token exchange
-    sp.auth_manager.get_access_token(code)
-
-    # After successful login → redirect back to homepage
-    return RedirectResponse(url="/")
-
-
-@app.get("/spotify-token")
-def spotify_token():
-    token_info = auth_manager.get_cached_token()
-
-    if not token_info:
-        return {"error": "Not authenticated"}
-
-    return {"token": token_info["access_token"]}
+    return [
+        {
+            "name": t["name"],
+            "artist": t["artists"][0]["name"],
+            "uri": t["uri"],
+            "image": t["album"]["images"][0]["url"]
+        }
+        for t in tracks
+    ]

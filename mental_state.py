@@ -1,48 +1,77 @@
+# ================= EMOTION GROUPS =================
+
+NEGATIVE_EMOTIONS = {"sadness", "fear", "anger", "disgust"}
+NEUTRAL_EMOTIONS = {"neutral"}
+POSITIVE_EMOTIONS = {"joy", "happy", "surprise"}
+
+# ================= SCORING CONSTANTS =================
+
+BASE_SCORE = 100
+NEGATIVE_IMPACT = 40
+NEUTRAL_IMPACT = 15
+
+
+# ================= EMOTION NORMALIZATION =================
+
+def normalize_emotion(emotion):
+    """Safely normalize emotion input."""
+    
+    if not emotion:
+        return ""
+
+    return str(emotion).lower().strip()
+
+
+# ================= EMOTION IMPACT =================
+
+def emotion_impact(emotion):
+    """Return score reduction based on emotion."""
+
+    if emotion in NEGATIVE_EMOTIONS:
+        return NEGATIVE_IMPACT
+
+    if emotion in NEUTRAL_EMOTIONS:
+        return NEUTRAL_IMPACT
+
+    return 0
+
+
+# ================= STRESS SCORE =================
+
 def calculate_stress_score(text_emotion, face_emotion):
     """
-    Calculate combined stress score based on text and facial emotions.
+    Calculate combined stress score using text + face emotions.
 
-    Base score = 100
-    Negative emotions reduce score by 40
-    Neutral reduces score by 15
-    Positive emotions do not reduce score
+    Base score: 100
+
+    Negative emotion → -40
+    Neutral emotion → -15
+    Positive emotion → 0
 
     Returns:
-        score (int): 0–100
-        risk (str): Risk category
+        score (int)
+        risk (str)
     """
 
-    # Normalize input safely
-    text_emotion = (text_emotion or "").lower()
-    face_emotion = (face_emotion or "").lower()
+    text_emotion = normalize_emotion(text_emotion)
+    face_emotion = normalize_emotion(face_emotion)
 
-    # Base score (healthy = 100)
-    score = 100
+    score = BASE_SCORE
 
-    NEGATIVE_EMOTIONS = {"sadness", "fear", "anger", "disgust"}
-    MILD_EMOTIONS = {"neutral"}
-    POSITIVE_EMOTIONS = {"joy", "happy", "surprise"}  # kept for clarity
+    # Apply emotion impacts
+    score -= emotion_impact(text_emotion)
+    score -= emotion_impact(face_emotion)
 
-    def apply_emotion_impact(emotion):
-        nonlocal score
-        if emotion in NEGATIVE_EMOTIONS:
-            score -= 40
-        elif emotion in MILD_EMOTIONS:
-            score -= 15
-        # Positive emotions intentionally reduce nothing (same behavior)
+    # Clamp score
+    score = max(0, min(100, score))
 
-    # Apply impacts
-    apply_emotion_impact(text_emotion)
-    apply_emotion_impact(face_emotion)
-
-    # Clamp score safely
-    score = max(0, min(score, 100))
-
-    # Determine risk level (same thresholds)
+    # Risk classification
     if score < 30:
         risk = "High Risk"
+
     elif score < 60:
         risk = "Moderate Stress"
+
     else:
         risk = "Healthy"
 

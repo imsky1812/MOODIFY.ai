@@ -1,15 +1,9 @@
 /* =========================================================
    MOODIFY.ai MAIN SCRIPT
-   Fully optimized stable version
+   Production Stable Version
 =========================================================*/
 
-/* ================= Slider VARIABLES ================= */
-
-let progressInterval = null
-let currentPosition = 0
-let currentDuration = 0
-
-/* ================= SPOTIFY VARIABLES ================= */
+/* ================= GLOBAL STATE ================= */
 
 let spotifyPlayer = null
 let deviceId = null
@@ -17,11 +11,117 @@ let spotifyToken = null
 
 let trackQueue = []
 let currentTrackIndex = 0
+let currentMood = null
+
+let progressInterval = null
+let currentPosition = 0
+let currentDuration = 0
 let isPlaying = false
-let currentMood = null;
+
+let searchLock = false
+
+/* ================= DOM ELEMENTS ================= */
+
+const chat = document.getElementById("chat")
+const input = document.getElementById("userInput")
+const songSlider = document.getElementById("songSlider")
+const volumeSlider = document.getElementById("volumeSlider")
 
 /* =========================================================
-   SPOTIFY SDK INITIALIZATION
+   SEND BUTTON
+=========================================================*/
+const sendBtn = document.getElementById("sendBtn");
+sendBtn.classList.add("sendPulse");
+setTimeout(()=>sendBtn.classList.remove("sendPulse"),300);
+
+if(sendBtn){
+
+    sendBtn.addEventListener("click", sendMessage);
+
+}
+
+/* =========================================================
+   CAMERA BUTTON
+=========================================================*/
+
+const cameraBtn = document.getElementById("cameraBtn");
+
+if(cameraBtn){
+
+    cameraBtn.addEventListener("click", async () => {
+
+        try{
+
+            await fetch("/start-camera");
+
+            addMessage("📷 Camera started", "bot");
+
+        }
+        catch(err){
+
+            addMessage("Camera could not start.", "bot");
+
+        }
+
+    });
+
+}
+
+/* =========================================================
+   MIC BUTTON
+=========================================================*/
+
+const voiceBtn = document.getElementById("voiceBtn");
+const voiceModal = document.getElementById("voiceModal");
+const startVoiceBtn = document.getElementById("startVoiceBtn");
+const closeVoiceBtn = document.getElementById("closeVoiceBtn");
+const voiceStatus = document.getElementById("voiceStatus");
+
+if(voiceBtn){
+
+    voiceBtn.addEventListener("click", () => {
+
+        voiceModal.classList.remove("hidden");
+
+    });
+
+}
+
+if(closeVoiceBtn){
+
+    closeVoiceBtn.addEventListener("click", () => {
+
+        voiceModal.classList.add("hidden");
+
+    });
+
+}
+
+if(startVoiceBtn){
+
+    startVoiceBtn.addEventListener("click", async () => {
+
+        voiceStatus.innerText = "Listening...";
+
+        try{
+
+            await fetch("/start-voice");
+
+            voiceStatus.innerText = "Voice assistant started";
+
+        }
+        catch{
+
+            voiceStatus.innerText = "Voice failed to start";
+
+        }
+
+    });
+
+}
+
+/* =========================================================
+   SPOTIFY SDK INIT
 =========================================================*/
 
 window.onSpotifyWebPlaybackSDKReady = function () {
@@ -32,8 +132,8 @@ window.onSpotifyWebPlaybackSDKReady = function () {
         .then(res => res.json())
         .then(data => {
 
-            if (!data.token) {
-                console.warn("Spotify token missing")
+            if (!data.token || data.error) {
+                console.warn("Spotify not authenticated")
                 return
             }
 
@@ -48,7 +148,6 @@ window.onSpotifyWebPlaybackSDKReady = function () {
             spotifyPlayer.addListener("ready", ({ device_id }) => {
 
                 deviceId = device_id
-                console.log("Spotify device ready:", deviceId)
 
                 fetch("https://api.spotify.com/v1/me/player", {
                     method: "PUT",
@@ -70,273 +169,304 @@ window.onSpotifyWebPlaybackSDKReady = function () {
 }
 
 /* =========================================================
-   PLAYER STATE LISTENER
+   PLAYER STATE
 =========================================================*/
 
 function handlePlayerState(state){
 
-    if(!state) return;
+    if(!state) return
 
-    const slider = document.getElementById("songSlider");
-    const currentTime = document.getElementById("currentTime");
-    const totalTime = document.getElementById("totalTime");
-    const playBtn = document.getElementById("playPauseBtn");
-    const album = document.getElementById("trackImage");
-    const wrapper = document.querySelector(".spotify-wrapper");
-    const body = document.body;
+    const playBtn = document.getElementById("playPauseBtn")
+    const album = document.getElementById("trackImage")
+    const wrapper = document.querySelector(".spotify-wrapper")
 
-    /* ===== STORE POSITION ===== */
+    currentPosition = state.position
+    currentDuration = state.duration
 
-    currentPosition = state.position;
-    currentDuration = state.duration;
+    updateProgressBar()
 
-    updateProgressBar();
-
-    /* ===== AUTO PROGRESS UPDATE ===== */
-
-    if(progressInterval){
-        clearInterval(progressInterval);
+    if(progressInterval !== null){
+        clearInterval(progressInterval)
+        progressInterval = null
     }
 
     if(!state.paused){
 
         progressInterval = setInterval(()=>{
 
-            currentPosition += 500;
+            currentPosition += 500
 
             if(currentPosition >= currentDuration){
-                clearInterval(progressInterval);
-                return;
+                clearInterval(progressInterval)
+                progressInterval = null
+                return
             }
 
-            updateProgressBar();
+            updateProgressBar()
 
-        },500);
+        },500)
 
     }
 
-    /* ===== PLAY BUTTON ===== */
-
-    isPlaying = !state.paused;
+    isPlaying = !state.paused
 
     if(playBtn){
-        playBtn.innerText = isPlaying ? "⏸" : "▶";
+        playBtn.innerText = isPlaying ? "⏸" : "▶"
     }
-
-    /* ===== ALBUM ANIMATION ===== */
 
     if(album && wrapper){
 
         if(isPlaying){
-            album.classList.add("rotating");
-            wrapper.classList.add("spotify-active");
-            document.body.classList.add("spotify-playing");
-        }
-        else{
-            album.classList.remove("rotating");
-            wrapper.classList.remove("spotify-active");
-            document.body.classList.remove("spotify-playing");
+            album.classList.add("rotating")
+            wrapper.classList.add("spotify-active")
+            document.body.classList.add("spotify-playing")
+        }else{
+            album.classList.remove("rotating")
+            wrapper.classList.remove("spotify-active")
+            document.body.classList.remove("spotify-playing")
         }
 
     }
 
-    /* ===== AUTO NEXT TRACK ===== */
+    /* AUTO NEXT */
 
     if(state.paused && state.position === 0){
 
-        currentTrackIndex++;
+        currentTrackIndex++
 
         if(currentTrackIndex >= trackQueue.length - 2){
-            extendQueue();
+            extendQueue()
         }
+
         if(currentTrackIndex < trackQueue.length){
-            playTrack(trackQueue[currentTrackIndex], "left");
+            playTrack(trackQueue[currentTrackIndex])
         }
 
     }
 
 }
 
+/* =========================================================
+   PROGRESS BAR
+=========================================================*/
+
 function updateProgressBar(){
 
-    const slider = document.getElementById("songSlider");
-    const currentTime = document.getElementById("currentTime");
-    const totalTime = document.getElementById("totalTime");
+    const currentTime = document.getElementById("currentTime")
+    const totalTime = document.getElementById("totalTime")
 
-    if(!slider || !currentDuration) return;
+    if(!songSlider || !currentDuration) return
 
-    const progress = (currentPosition / currentDuration) * 100;
+    const progress = (currentPosition / currentDuration) * 100
 
-    slider.value = progress;
+    songSlider.value = progress
 
-    slider.style.background = `linear-gradient(
+    songSlider.style.background = `linear-gradient(
         to right,
         #1db954 0%,
         #1db954 ${progress}%,
         rgba(255,255,255,0.25) ${progress}%,
         rgba(255,255,255,0.25) 100%
-    )`;
+    )`
 
-    if(currentTime){
-        currentTime.innerText = formatTime(currentPosition);
-    }
-
-    if(totalTime){
-        totalTime.innerText = formatTime(currentDuration);
-    }
-
-}
-
-const songSlider = document.getElementById("songSlider");
-
-if(songSlider){
-
-    songSlider.addEventListener("input", ()=>{
-
-        if(!spotifyPlayer) return;
-
-        spotifyPlayer.getCurrentState().then(state=>{
-
-            if(!state) return;
-
-            const position = (songSlider.value / 100) * state.duration;
-
-            spotifyPlayer.seek(position);
-
-            currentPosition = position;
-            currentDuration = state.duration;
-
-            updateProgressBar();
-
-        });
-
-    });
+    if(currentTime) currentTime.innerText = formatTime(currentPosition)
+    if(totalTime) totalTime.innerText = formatTime(currentDuration)
 
 }
 
 function formatTime(ms){
 
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
+    const minutes = Math.floor(ms / 60000)
+    const seconds = Math.floor((ms % 60000) / 1000)
 
-    return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+    return minutes + ":" + (seconds < 10 ? "0" : "") + seconds
 
 }
+
 /* =========================================================
-   SEARCH AND PLAY
+   SEEK
 =========================================================*/
 
-async function searchAndPlay() {
+if(songSlider){
 
-    const input = document.getElementById("musicSearch")
-    if (!input) return
+    songSlider.addEventListener("input", ()=>{
 
-    const query = input.value.trim()
-    if (!query) return
+        if(!spotifyPlayer) return
 
-    try {
+        spotifyPlayer.getCurrentState().then(state=>{
+
+            if(!state) return
+
+            const position = (songSlider.value / 100) * state.duration
+
+            spotifyPlayer.seek(position)
+
+            currentPosition = position
+            currentDuration = state.duration
+
+            updateProgressBar()
+
+        })
+
+    })
+
+}
+
+/* =========================================================
+   SEARCH SONG
+=========================================================*/
+
+async function searchAndPlay(){
+
+    
+    if(searchLock) return
+
+    const searchInput = document.getElementById("musicSearch")
+    if(!searchInput) return
+
+    const query = searchInput.value.trim()
+
+    if(!query){
+        addMessage("🎧 What would you like to listen to?", "bot")
+        return
+    }
+
+    try{
+
+        searchLock = true
 
         const res = await fetch(`/spotify-search?query=${encodeURIComponent(query)}`)
         const tracks = await res.json()
 
-        if (!tracks || tracks.length === 0) return
+        if(!tracks || tracks.length === 0) return
 
         trackQueue = tracks
         currentTrackIndex = 0
 
-        playTrack(trackQueue[currentTrackIndex], "left")
+        playTrack(trackQueue[currentTrackIndex])
 
-    } catch (err) {
+        input.value = ""
+
+    }catch(err){
 
         console.error("Spotify search error", err)
 
+    }finally{
+        searchLock = false
     }
+
+}
+
+const musicSearch = document.getElementById("musicSearch")
+const searchBtn = document.getElementById("searchPlayBtn");
+
+if(searchBtn){
+
+    searchBtn.addEventListener("click", () => {
+
+        searchAndPlay();
+
+    });
+
+}
+
+if (musicSearch) {
+
+    musicSearch.addEventListener("keypress", function(e){
+
+        if (e.key === "Enter") {
+
+            e.preventDefault();
+
+            searchAndPlay();
+
+        }
+
+    });
+
 }
 
 /* =========================================================
    PLAY TRACK
 =========================================================*/
 
-function playTrack(track, direction="left"){
+function playTrack(track){
 
-    if(!track || !deviceId) return;
+    if(!track || !deviceId) return
 
-    fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-        method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${spotifyToken}`
+    fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,{
+        method:"PUT",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization":`Bearer ${spotifyToken}`
         },
-        body: JSON.stringify({
-            uris: [track.uri]
-        })
-    });
+        body:JSON.stringify({ uris:[track.uri] })
+    })
 
-    /* ===== UPDATE UI ===== */
+    const album = document.getElementById("trackImage")
+    const title = document.getElementById("trackTitle")
+    const artist = document.getElementById("trackArtist")
 
-    const album = document.getElementById("trackImage");
-    const title = document.getElementById("trackTitle");
-    const artist = document.getElementById("trackArtist");
-
-    if(album && track.image){
-        album.src = track.image;
-        updateMiniPlayerColor(track.image);
+    if(album){
+        album.src = track.image || "/static/music.png"
+        updateMiniPlayerColor(track.image)
     }
 
-    if(title){
-        title.innerText = track.name;
-    }
-
-    if(artist){
-        artist.innerText = track.artist;
-    }
+    if(title) title.innerText = track.name
+    if(artist) artist.innerText = track.artist
 
 }
 
+/* =========================================================
+   ALBUM COLOR EXTRACTION
+=========================================================*/
+
 function updateMiniPlayerColor(imageUrl){
 
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = imageUrl;
+    if(!imageUrl) return
+
+    const img = new Image()
+    img.crossOrigin = "anonymous"
+    img.src = imageUrl
 
     img.onload = function(){
 
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
+        const canvas = document.createElement("canvas")
+        const ctx = canvas.getContext("2d")
 
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = 50
+        canvas.height = 50
 
-        ctx.drawImage(img,0,0);
+        ctx.drawImage(img,0,0,50,50)
 
-        const data = ctx.getImageData(0,0,img.width,img.height).data;
+        const data = ctx.getImageData(0,0,50,50).data
 
-        let r = 0, g = 0, b = 0, count = 0;
+        let r=0,g=0,b=0,count=0
 
-        for(let i=0;i<data.length;i+=40){
+        for(let i=0;i<data.length;i+=20){
 
-            r += data[i];
-            g += data[i+1];
-            b += data[i+2];
-            count++;
+            r+=data[i]
+            g+=data[i+1]
+            b+=data[i+2]
+            count++
 
         }
 
-        r = Math.floor(r/count);
-        g = Math.floor(g/count);
-        b = Math.floor(b/count);
+        r=Math.floor(r/count)
+        g=Math.floor(g/count)
+        b=Math.floor(b/count)
 
-        const miniPlayer = document.getElementById("miniPlayer");
+        const miniPlayer=document.getElementById("miniPlayer")
 
         if(miniPlayer){
 
-            miniPlayer.style.background = `
+            miniPlayer.style.background=`
                 linear-gradient(
                     135deg,
                     rgba(${r},${g},${b},0.45),
                     rgba(10,10,15,0.85)
                 )
-            `;
+            `
 
         }
 
@@ -345,28 +475,32 @@ function updateMiniPlayerColor(imageUrl){
 }
 
 /* =========================================================
-   SPOTIFY RADIO (INFINITE AUTOPLAY)
+   INFINITE RADIO
 =========================================================*/
 
 async function extendQueue(){
 
-    if(trackQueue.length === 0) return;
+    if(trackQueue.length === 0) return
 
-    const lastTrack = trackQueue[trackQueue.length - 1];
+    const lastTrack = trackQueue[trackQueue.length-1]
 
     try{
 
-        const res = await fetch(`/spotify-search?query=${encodeURIComponent(lastTrack.artist)}`);
-        const newTracks = await res.json();
+        const res = await fetch(`/spotify-search?query=${encodeURIComponent(lastTrack.artist)}`)
+        const newTracks = await res.json()
 
-        if(!newTracks || newTracks.length === 0) return;
+        if(!newTracks) return
 
-        // append new songs
-        trackQueue = trackQueue.concat(newTracks);
+        const existing = new Set(trackQueue.map(t=>t.uri))
 
-    }
-    catch(err){
-        console.log("Queue extension error", err);
+        newTracks.forEach(track=>{
+            if(!existing.has(track.uri)){
+                trackQueue.push(track)
+            }
+        })
+
+    }catch(err){
+        console.log("Queue extension error",err)
     }
 
 }
@@ -375,355 +509,325 @@ async function extendQueue(){
    PLAYER BUTTONS
 =========================================================*/
 
-const playBtn = document.getElementById("playPauseBtn")
+const playBtn=document.getElementById("playPauseBtn")
 
-if (playBtn) {
+if(playBtn){
 
-    playBtn.addEventListener("click", () => {
+    playBtn.addEventListener("click",()=>{
 
-        if (!spotifyPlayer) return
-
-        spotifyPlayer.togglePlay()
+        if(spotifyPlayer){
+            spotifyPlayer.togglePlay()
+        }
 
     })
+
 }
 
-const nextBtn = document.getElementById("nextBtn")
+const nextBtn=document.getElementById("nextBtn")
 
-if (nextBtn) {
+if(nextBtn){
 
-    nextBtn.addEventListener("click", () => {
+    nextBtn.addEventListener("click",()=>{
 
-        if (trackQueue.length === 0) return
+        if(trackQueue.length===0) return
 
         currentTrackIndex++
 
-        if (currentTrackIndex >= trackQueue.length) {
-            currentTrackIndex = 0
+        if(currentTrackIndex>=trackQueue.length){
+            currentTrackIndex=0
         }
 
-        playTrack(trackQueue[currentTrackIndex], "left")
+        playTrack(trackQueue[currentTrackIndex])
 
     })
+
 }
 
-const prevBtn = document.getElementById("prevBtn")
+const prevBtn=document.getElementById("prevBtn")
 
-if (prevBtn) {
+if(prevBtn){
 
-    prevBtn.addEventListener("click", () => {
+    prevBtn.addEventListener("click",()=>{
 
-        if (trackQueue.length === 0) return
+        if(trackQueue.length===0) return
 
         currentTrackIndex--
 
-        if (currentTrackIndex < 0) {
-            currentTrackIndex = trackQueue.length - 1
+        if(currentTrackIndex<0){
+            currentTrackIndex=trackQueue.length-1
         }
 
-        playTrack(trackQueue[currentTrackIndex], "right")
+        playTrack(trackQueue[currentTrackIndex])
 
     })
-}
 
-/* =========================================================
-   ENTER KEY SEARCH
-=========================================================*/
-
-const musicSearch = document.getElementById("musicSearch")
-
-if (musicSearch) {
-
-    musicSearch.addEventListener("keydown", e => {
-
-        if (e.key === "Enter") {
-            e.preventDefault()
-            searchAndPlay()
-        }
-
-    })
 }
 
 /* =========================================================
    MINI PLAYER HOVER
 =========================================================*/
 
-/* =========================================================
-   MINI PLAYER HOVER + SPOTIFY AUTH FIX
-=========================================================*/
+const spotifyIcon=document.getElementById("spotifyIcon")
+const miniPlayer=document.getElementById("miniPlayer")
 
+let closeTimer=null
 
-const spotifyIcon = document.getElementById("spotifyIcon");
-const miniPlayer = document.getElementById("miniPlayer");
+if(spotifyIcon && miniPlayer){
 
-let closeTimer = null;
+    spotifyIcon.addEventListener("mouseenter",()=>{
 
-if (spotifyIcon && miniPlayer) {
+        miniPlayer.classList.add("active")
 
-    /* -------- OPEN PLAYER ON HOVER -------- */
-
-    spotifyIcon.addEventListener("mouseenter", () => {
-
-        miniPlayer.classList.add("active");
-
-        if (closeTimer) {
-            clearTimeout(closeTimer);
+        if(closeTimer){
+            clearTimeout(closeTimer)
         }
 
-    });
+    })
 
-    /* -------- DELAY CLOSE WHEN LEAVING ICON -------- */
+    spotifyIcon.addEventListener("mouseleave",()=>{
 
-    spotifyIcon.addEventListener("mouseleave", () => {
+        closeTimer=setTimeout(()=>{
 
-        closeTimer = setTimeout(() => {
-
-            if (!miniPlayer.matches(":hover")) {
-                miniPlayer.classList.remove("active");
+            if(!miniPlayer.matches(":hover")){
+                miniPlayer.classList.remove("active")
             }
 
-        }, 5000);
+        },5000)
 
-    });
+    })
 
-    /* -------- KEEP PLAYER OPEN WHEN HOVERING -------- */
+    miniPlayer.addEventListener("mouseenter",()=>{
 
-    miniPlayer.addEventListener("mouseenter", () => {
-
-        if (closeTimer) {
-            clearTimeout(closeTimer);
+        if(closeTimer){
+            clearTimeout(closeTimer)
         }
 
-    });
+    })
 
-    /* -------- CLOSE WHEN LEAVING PLAYER -------- */
+    miniPlayer.addEventListener("mouseleave",()=>{
 
-    miniPlayer.addEventListener("mouseleave", () => {
+        closeTimer=setTimeout(()=>{
 
-        closeTimer = setTimeout(() => {
+            miniPlayer.classList.remove("active")
 
-            miniPlayer.classList.remove("active");
+        },5000)
 
-        }, 5000);
+    })
 
-    });
+    spotifyIcon.addEventListener("click",(e)=>{
 
-    /* -------- CLICK TO AUTHENTICATE -------- */
+        e.preventDefault()
+        e.stopPropagation()
 
-    spotifyIcon.addEventListener("click", function(e){
+        window.location.href="/spotify-login"
 
-        e.preventDefault();
-        e.stopPropagation();
-
-        console.log("Spotify login clicked");
-
-        window.location.href = "/spotify-login";
-
-    });
+    })
 
 }
 
-/* =======================VOLUME SLIDER=========================*/
-const volumeSlider = document.getElementById("volumeSlider");
+/* =========================================================
+   VOLUME
+=========================================================*/
 
 if(volumeSlider){
 
-    volumeSlider.addEventListener("input", () => {
+    volumeSlider.addEventListener("input",()=>{
 
-        const volume = volumeSlider.value / 100;
+        const volume = volumeSlider.value/100
 
         if(spotifyPlayer){
-            spotifyPlayer.setVolume(volume);
+            spotifyPlayer.setVolume(volume)
         }
 
-        const progress = volumeSlider.value;
+        const progress=volumeSlider.value
 
-        volumeSlider.style.background = `linear-gradient(
+        volumeSlider.style.background=`linear-gradient(
             to right,
             #1db954 0%,
             #1db954 ${progress}%,
             rgba(255,255,255,0.25) ${progress}%,
             rgba(255,255,255,0.25) 100%
-        )`;
+        )`
 
-    });
+    })
 
 }
 
 /* =========================================================
-   CHAT SYSTEM
+   CHAT
 =========================================================*/
 
-const chat = document.getElementById("chat")
-const input = document.getElementById("userInput")
+function addMessage(text,cls){
 
-function addMessage(text, cls) {
+    if(!chat || !text) return
 
-    if (!chat || !text) return
-
-    const div = document.createElement("div")
-    div.className = cls
-    div.innerText = text
+    const div=document.createElement("div")
+    div.className=cls
+    div.innerText=text
 
     chat.appendChild(div)
 
     chat.scrollTo({
-        top: chat.scrollHeight,
-        behavior: "smooth"
+        top:chat.scrollHeight,
+        behavior:"smooth"
     })
+
 }
 
 /* =========================================================
    SEND MESSAGE
 =========================================================*/
 
-async function sendMessage() {
-    
-    if (!input) return
+async function sendMessage(){
 
-    const text = input.value.trim()
+    if(!input) return
 
-    if (!text) return
+    const text=input.value.trim()
 
-    addMessage(text, "user")
-    input.value = ""
+    if(!text) return
 
-    const typingBubble = document.createElement("div")
-    typingBubble.className = "bot-typing"
-    typingBubble.innerHTML = `<div class="thinking-dot"></div>`
+    addMessage(text,"user")
 
-    chat.appendChild(typingBubble)
+    input.value=""
 
-    try {
+    const typing=document.createElement("div")
+    typing.className="bot-typing"
+    typing.innerHTML=`<div class="thinking-dot"></div>`
 
-        const res = await fetch("/analyze-text/", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text })
+    chat.appendChild(typing)
+
+    try{
+
+        const res=await fetch("/analyze-text/",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({text})
         })
 
-        const data = await res.json()
+        const data=await res.json()
 
-        typingBubble.remove()
-
-        addMessage(data.support_message, "bot")
-
-        if (data.wellbeing_score !== undefined) {
-
-            document.getElementById("wellbeingScore").innerText = data.wellbeing_score
-
-            let mood = "neutral"
-
-            if (data.wellbeing_score < 40) mood = "sad"
-            else if (data.wellbeing_score < 60) mood = "calm"
-            else if (data.wellbeing_score < 80) mood = "neutral"
-            else mood = "happy"
-            
-            if(currentMood !== mood){
-                currentMood = mood;
-                playMoodMusic(mood);
-            }
-        }
+        typing.remove()
 
         if(data.command){
-
-            handleMusicCommand(data.command);
-
+            handleMusicCommand(data.command)
+            return
         }
 
         if(data.music_query){
 
-            document.getElementById("musicSearch").value = data.music_query
+            document.getElementById("musicSearch").value=data.music_query
             searchAndPlay()
 
-            addMessage("🎧 Playing music for you...", "bot")
-
+            addMessage("🎧 Playing music for you...","bot")
             return
+
         }
 
-        if (data.risk_level === "HIGH") {
+        addMessage(data.support_message,"bot")
+
+        if(data.wellbeing_score !== undefined){
+
+            const score=document.getElementById("wellbeingScore")
+            if(score){
+                score.innerText=data.wellbeing_score
+            }
+
+        }
+
+        if(data.risk_level==="HIGH"){
             showEmergencyPopup()
         }
 
-    } catch (err) {
+    }catch(err){
 
-        typingBubble.remove()
-        addMessage("Something went wrong.", "bot")
+        typing.remove()
+        addMessage("Something went wrong.","bot")
 
     }
+
 }
+
+/* =========================================================
+   MUSIC COMMAND HANDLER
+=========================================================*/
 
 function handleMusicCommand(command){
 
-    if(command.startsWith("play_song")){
+    if(!command) return
 
-        const song = command.split(":")[1].trim();
-        document.getElementById("musicSearch").value = song;
-        searchAndPlay();
+    const parts = command.split(":")
+    const value = parts[1] ? parts[1].trim() : ""
+
+    switch(true){
+
+        case command.startsWith("play_song"):
+
+            document.getElementById("musicSearch").value=value
+            searchAndPlay()
+
+        break
+
+        case command.startsWith("play_artist"):
+
+            document.getElementById("musicSearch").value=value
+            searchAndPlay()
+
+        break
+
+        case command.startsWith("play_mood"):
+
+            playMoodMusic(value)
+
+        break
+
+        case command==="pause":
+
+            if(spotifyPlayer) spotifyPlayer.pause()
+
+        break
+
+        case command==="next":
+
+            document.getElementById("nextBtn").click()
+
+        break
+
+        case command==="previous":
+
+            document.getElementById("prevBtn").click()
+
+        break
+
+        case command==="stop":
+
+            if(spotifyPlayer) spotifyPlayer.pause()
+
+        break
+
+        case command==="volume_up":
+
+            if(volumeSlider && spotifyPlayer){
+
+                volumeSlider.value=Math.min(100,Number(volumeSlider.value)+10)
+                spotifyPlayer.setVolume(volumeSlider.value/100)
+
+            }
+
+        break
+
+        case command==="volume_down":
+
+            if(volumeSlider && spotifyPlayer){
+
+                volumeSlider.value=Math.max(0,Number(volumeSlider.value)-10)
+                spotifyPlayer.setVolume(volumeSlider.value/100)
+
+            }
+
+        break
 
     }
 
-    if(command.startsWith("play_artist")){
-
-        const artist = command.split(":")[1].trim();
-        document.getElementById("musicSearch").value = artist;
-        searchAndPlay();
-
-    }
-
-    if(command.startsWith("play_mood")){
-
-        const mood = command.split(":")[1].trim();
-        playMoodMusic(mood);
-
-    }
-
-    if(command === "pause"){
-        spotifyPlayer.pause();
-    }
-
-    if(command === "next"){
-        document.getElementById("nextBtn").click();
-    }
-
-    if(command === "previous"){
-        document.getElementById("prevBtn").click();
-    }
-
-    if(command === "stop"){
-        spotifyPlayer.pause();
-    }
-
-    if(command === "volume_up"){
-
-        const volumeSlider = document.getElementById("volumeSlider");
-        volumeSlider.value = Math.min(100, Number(volumeSlider.value) + 10);
-        spotifyPlayer.setVolume(volumeSlider.value / 100);
-
-    }
-
-    if(command === "volume_down"){
-
-        const volumeSlider = document.getElementById("volumeSlider");
-        volumeSlider.value = Math.max(0, Number(volumeSlider.value) - 10);
-        spotifyPlayer.setVolume(volumeSlider.value / 100);
-
-    }
-
-}
-
-
-/* =========================================================
-   ENTER CHAT MESSAGE
-=========================================================*/
-
-if (input) {
-
-    input.addEventListener("keypress", e => {
-
-        if (e.key === "Enter") sendMessage()
-
-    })
 }
 
 /* =========================================================
@@ -733,108 +837,105 @@ if (input) {
 function playMoodMusic(mood){
 
     fetch(`/spotify-recommend?mood=${mood}`)
-    .then(res => res.json())
-    .then(tracks => {
+    .then(res=>res.json())
+    .then(tracks=>{
 
-        if(!tracks || tracks.length === 0) return;
+        if(!tracks || tracks.length===0) return
 
-        trackQueue = tracks;
-        currentTrackIndex = 0;
+        trackQueue=tracks
+        currentTrackIndex=0
 
-        playTrack(trackQueue[currentTrackIndex]);
+        playTrack(trackQueue[0])
 
-    });
+    })
+
 }
 
 /* =========================================================
-   EMERGENCY POPUP
+   ENTER KEY
 =========================================================*/
 
-function showEmergencyPopup() {
+if(input){
 
-    const popup = document.getElementById("emergencyPopup")
+    input.addEventListener("keypress",e=>{
 
-    if (popup) popup.style.display = "flex"
-}
+        if(e.key==="Enter"){
+            sendMessage()
+        }
 
-function closeEmergency() {
+    })
 
-    const popup = document.getElementById("emergencyPopup")
-
-    if (popup) popup.style.display = "none"
 }
 
 /* =========================================================
-   CURSOR LIGHT EFFECT
+   EMERGENCY
 =========================================================*/
 
-const glow = document.querySelector(".cursor-glow")
+function showEmergencyPopup(){
 
-let mouseX = 0
-let mouseY = 0
-let currentX = 0
-let currentY = 0
+    const popup=document.getElementById("emergencyPopup")
+    if(popup) popup.style.display="flex"
 
-document.addEventListener("mousemove", e => {
+}
 
-    mouseX = e.clientX
-    mouseY = e.clientY
+function closeEmergency(){
+
+    const popup=document.getElementById("emergencyPopup")
+    if(popup) popup.style.display="none"
+
+}
+
+/* =========================================================
+   CURSOR GLOW
+=========================================================*/
+
+const glow=document.querySelector(".cursor-glow")
+
+let mouseX=0
+let mouseY=0
+let currentX=0
+let currentY=0
+
+document.addEventListener("mousemove",e=>{
+    mouseX=e.clientX
+    mouseY=e.clientY
 })
 
-function animateGlow() {
+function animateGlow(){
 
-    if (!glow) return
+    if(!glow) return
 
-    currentX += (mouseX - currentX) * 0.08
-    currentY += (mouseY - currentY) * 0.08
+    currentX+=(mouseX-currentX)*0.08
+    currentY+=(mouseY-currentY)*0.08
 
-    glow.style.left = currentX + "px"
-    glow.style.top = currentY + "px"
+    glow.style.left=currentX+"px"
+    glow.style.top=currentY+"px"
 
     requestAnimationFrame(animateGlow)
+
 }
 
 animateGlow()
 
 /* =========================================================
-   HARD REFRESH
+   WELCOME
 =========================================================*/
 
-const refreshBtn = document.getElementById("refreshApp")
-
-if (refreshBtn) {
-
-    refreshBtn.addEventListener("click", () => {
-
-        window.location.href = "/"
-
-    })
-}
-
-// WELCOME MESSAGE
-
-window.addEventListener("load", async () => {
+window.addEventListener("load",async()=>{
 
     try{
-        const res = await fetch("/welcome");
-        const data = await res.json();
+
+        const res=await fetch("/welcome")
+        const data=await res.json()
 
         if(data.message){
-            addMessage(data.message, "bot");
+            addMessage(data.message,"bot")
         }
 
     }catch{
-        addMessage("Hello! I'm Moodify. How are you feeling today?", "bot");
+
+        addMessage("Hello! I'm Moodify. How are you feeling today?","bot")
+
     }
 
-    try{
-        const res = await fetch("/initial-score");
-        const data = await res.json();
-
-        const score = document.getElementById("wellbeingScore");
-        if(score){
-            score.innerText = data.wellbeing_score;
-        }
-
-    }catch{}
-});
+})

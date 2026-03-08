@@ -1,22 +1,67 @@
-conversation_history = []
+from collections import deque
+from datetime import datetime
 
-def add_user_message(text):
-    conversation_history.append(text)
+# ================= MEMORY SETTINGS =================
 
-def get_history():
-    return conversation_history
+# Limit conversation history to prevent memory overflow
+MAX_HISTORY = 200
 
-def message_count():
-    return len(conversation_history)
+# Thread-safe circular memory buffer
+conversation_history = deque(maxlen=MAX_HISTORY)
 
-def last_messages(n=10):
-    return conversation_history[-n:]
-
+# Last wellbeing score
 last_score = None
 
+
+# ================= ADD MESSAGE =================
+
+def add_user_message(text):
+    """Store user message in conversation history."""
+    
+    message = {
+        "role": "user",
+        "text": text,
+        "timestamp": datetime.utcnow()
+    }
+
+    conversation_history.append(message)
+
+
+# ================= GET HISTORY =================
+
+def get_history():
+    """Return only text messages for AI processing."""
+    
+    return [msg["text"] for msg in conversation_history]
+
+
+# ================= MESSAGE COUNT =================
+
+def message_count():
+    """Total stored messages."""
+    
+    return len(conversation_history)
+
+
+# ================= LAST N MESSAGES =================
+
+def last_messages(n=10):
+    """Return last N messages as text."""
+    
+    messages = list(conversation_history)[-n:]
+    return [msg["text"] for msg in messages]
+
+
+# ================= WELLBEING SCORE =================
+
 def set_score(score):
+    """Store last calculated wellbeing score."""
+    
     global last_score
     last_score = score
 
+
 def get_score():
+    """Retrieve last wellbeing score."""
+    
     return last_score

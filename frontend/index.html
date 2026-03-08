@@ -1,243 +1,255 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- ===== META ===== -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MOODIFY.ai - AI-powered emotional wellbeing assistant for students.">
-    <meta name="msapplication-TileColor" content="#0f172a">
 
-    <title>MOODIFY.ai</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- ===== FAVICONS ===== -->
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
-    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<meta name="description" content="MOODIFY.ai - AI-powered emotional wellbeing assistant for students.">
 
-    <!-- ===== FONTS ===== -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<title>MOODIFY.ai</title>
 
-    <!-- ===== STYLES ===== -->
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+<!-- FAVICONS -->
+<link rel="icon" href="/static/favicon.ico">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+
+<!-- FONTS -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- CSS -->
+<link rel="stylesheet" href="/static/style.css">
+
+<!-- SPOTIFY WEB PLAYBACK SDK -->
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
+
 </head>
 
 <body>
+
 <div class="cursor-glow"></div>
 
-<!-- ===================================================== -->
-<!-- ===================== HEADER ======================== -->
-<!-- ===================================================== -->
+<!-- ================= HEADER ================= -->
 
-<header class="topbar" role="banner">
+<header class="topbar">
 
-    <!-- LEFT : BRAND -->
-    <div class="header-left">
-        <div class="brand" id="refreshApp" style="cursor:pointer;">
-            <img src="/static/logo.png" 
-                 class="logo" 
-                 alt="MOODIFY.ai logo"
-                 loading="lazy">
-            <h1 class="app-title">MOODIFY.ai</h1>
-        </div>
-    </div>
+<div class="header-left">
 
-    <!-- CENTER : SPOTIFY MINI PLAYER -->
-    <div class="spotify-wrapper">
+<div class="brand" id="refreshApp">
 
-        <div id="spotifyIcon">
-            <img src="/static/spotify.svg" alt="Spotify">
-        </div>
+<img src="/static/logo.png" class="logo" alt="Moodify logo">
 
-        <div id="miniPlayer">
-            <div class="album-blur-bg"></div>
-            <div class="search-row">
-                <input type="text" id="musicSearch" placeholder="Search song..." />
-                
-            </div>
+<h1 class="app-title">MOODIFY.ai</h1>
 
-            <div class="album-section">
-                 
-                <img id="trackImage"   class="hidden"  alt="Album cover"/>
-            </div>
-            
-            
+</div>
 
-            <div class="controls-section">
-                <button id="prevBtn" class="player-btn">
-                    ⏮
-                </button>
+</div>
 
-                <button id="playPauseBtn" class="player-btn play-btn">
-                    ▶
-                </button>
+<!-- ================= SPOTIFY PLAYER ================= -->
 
-                <button id="nextBtn" class="player-btn">
-                    ⏭
-                </button>
-            </div>
+<div class="spotify-wrapper">
 
-            <div class="track-info">
+<div id="spotifyIcon">
+<img src="/static/spotify.svg" alt="Spotify">
+</div>
 
-                <div id="trackTitle" class="track-title">
-                    No song playing
-                </div>
+<div id="miniPlayer">
 
-                <div id="trackArtist" class="track-artist">
-                    Moodify Player
-                </div>
+<div class="album-blur-bg"></div>
 
-            </div>
+<!-- SEARCH -->
 
-            <div class="progress-container">
+<div class="search-row">
 
-                <span id="currentTime" class="time-label">0:00</span>
+    <input 
+        type="text"
+        id="musicSearch"
+        placeholder="Search song or artist..."
+    />
 
-                <input 
-                    type="range"
-                    id="songSlider"
-                    min="0"
-                    max="100"
-                    value="0"
-                >
+    <button id="searchPlayBtn" title="Search & Play">
+        GO
+    </button>
 
-                <span id="totalTime" class="time-label">0:00</span>
+</div>
 
-            </div>
+<!-- ALBUM -->
 
-            <div class="volume-container">
+<div class="album-section">
 
-                <span class="volume-icon">🔊</span>
+<img
+id="trackImage"
+src="https://i1.sndcdn.com/artworks-uAn8HpTmcjKSAoP6-AzBtOg-t1080x1080.jpg"
+alt="Album cover"
+/>
 
-                <input  
-                    type="range"
-                    id="volumeSlider"
-                    min="0"
-                    max="100"
-                    value="60"
-                >
-            </div>
-        </div>
-    </div>
+</div>
 
-    <!-- RIGHT : WELLBEING SCORE -->
-    <div class="header-right">
-        <div class="wellbeing-box" aria-live="polite">
-            <!-- <button id="spotifyLogin" class="iconBtn">🎵 Connect</button> -->
-            Wellbeing: <span id="wellbeingScore">--</span>
-        </div>
-    </div>
+<!-- CONTROLS -->
+
+<div class="controls-section">
+
+<button id="prevBtn" class="player-btn">⏮</button>
+
+<button id="playPauseBtn" class="player-btn play-btn">▶</button>
+
+<button id="nextBtn" class="player-btn">⏭</button>
+
+</div>
+
+<!-- TRACK INFO -->
+
+<div class="track-info">
+
+<div id="trackTitle" class="track-title">
+No song playing
+</div>
+
+<div id="trackArtist" class="track-artist">
+Moodify Player
+</div>
+
+</div>
+
+<!-- PROGRESS -->
+
+<div class="progress-container">
+
+<span id="currentTime" class="time-label">0:00</span>
+
+<input
+type="range"
+id="songSlider"
+min="0"
+max="100"
+value="0"
+/>
+
+<span id="totalTime" class="time-label">0:00</span>
+
+</div>
+
+<!-- VOLUME -->
+
+<div class="volume-container">
+
+<span class="volume-icon">🔊</span>
+
+<input
+type="range"
+id="volumeSlider"
+min="0"
+max="100"
+value="60"
+/>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- ================= WELLBEING ================= -->
+
+<div class="header-right">
+
+<div class="wellbeing-box">
+
+Wellbeing:
+<span id="wellbeingScore">--</span>
+
+</div>
+
+</div>
 
 </header>
 
-<!-- ===================================================== -->
-<!-- ================= CHAT SECTION ====================== -->
-<!-- ===================================================== -->
+<!-- ================= CHAT ================= -->
 
-<main id="chat-container" role="main">
+<main id="chat-container">
 
-    <!-- Chat Messages -->
-    <section id="chat" aria-label="Chat conversation"></section>
+<section id="chat"></section>
 
-    <!-- ================= CONTROLS ================= -->
-    <div id="controls">
+<div id="controls">
 
-        <!-- Camera Button -->
-        <button type="button" 
-                class="iconBtn" 
-                id="cameraBtn" 
-                title="Open camera"
-                aria-label="Open camera">
-            <img src="/static/camera.svg" alt="">
-        </button>
+<button class="iconBtn" id="cameraBtn">
+<img src="/static/camera.svg">
+</button>
 
-        <!-- Voice Button -->
-        <button type="button" 
-                class="iconBtn" 
-                id="voiceBtn" 
-                title="Start voice input"
-                aria-label="Start voice input">
-            <img src="/static/mic.svg" alt="">
-        </button>
+<button class="iconBtn" id="voiceBtn">
+<img src="/static/mic.svg">
+</button>
 
-        <!-- Text Input -->
-        <input id="userInput" 
-               type="text"
-               placeholder="Share how you're feeling..."
-               aria-label="Type your message"
-               autocomplete="off" />
+<input
+id="userInput"
+type="text"
+placeholder="Share how you're feeling..."
+autocomplete="off"
+/>
 
-        <!-- Send Button -->
-        <button type="button" 
-                id="sendBtn" 
-                title="Send message"
-                aria-label="Send message">
-            <img src="/static/send.svg" id="sendIcon" alt="">
-        </button>
+<button id="sendBtn">
+<img src="/static/send.svg" id="sendIcon">
+</button>
 
-    </div>
+</div>
 
 </main>
 
-<!-- ===================================================== -->
-<!-- ================= VOICE MODAL ======================= -->
-<!-- ===================================================== -->
+<!-- ================= VOICE MODAL ================= -->
 
-<div id="voiceModal" class="voiceModal hidden" role="dialog" aria-modal="true">
+<div id="voiceModal" class="voiceModal hidden">
 
-    <div class="voiceBox">
+<div class="voiceBox">
 
-        <h3>🎙 Voice Mode</h3>
+<h3>🎙 Voice Mode</h3>
 
-        <div id="voiceStatus" aria-live="polite">
-            Tap Start to Speak
-        </div>
+<div id="voiceStatus">
+Tap Start to Speak
+</div>
 
-        <div id="voiceIndicator" class="indicator hidden">
-            🔊
-        </div>
+<div id="voiceIndicator" class="indicator hidden">
+🔊
+</div>
 
-        <div class="voiceControls">
-            <button id="startVoiceBtn">Start</button>
-            <button id="closeVoiceBtn">Exit</button>
-        </div>
+<div class="voiceControls">
 
-        <p class="exitHint">Press <strong>Q</strong> to exit voice assistant</p>
+<button id="startVoiceBtn">Start</button>
 
-    </div>
+<button id="closeVoiceBtn">Exit</button>
 
 </div>
 
-<!-- ===================================================== -->
-<!-- ================= EMERGENCY POPUP =================== -->
-<!-- ===================================================== -->
-
-<div id="emergencyPopup" class="emergency-hidden" role="alertdialog" aria-modal="true">
-
-    <div class="emergency-box">
-
-        <h2>You matter.</h2>
-
-        <p id="emergencyMessage">
-            Moodify is here with you. Don’t worry — we’ve got your back.
-            If you're feeling overwhelmed, consider reaching out to a trusted friend,
-            family member, or a mental health professional.
-            You’re not alone. There are people who care about you and want to help.
-            Take a moment, breathe, and connect with someone you trust.
-        </p>
-
-        <button onclick="closeEmergency()">I understand</button>
-
-    </div>
+<p class="exitHint">
+Press <strong>Q</strong> to exit voice assistant
+</p>
 
 </div>
 
-<!-- ===================================================== -->
-<!-- ================= SCRIPTS =========================== -->
-<!-- ===================================================== -->
+</div>
 
-<script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
+<!-- ================= EMERGENCY ================= -->
+
+<div id="emergencyPopup" class="emergency-hidden">
+
+<div class="emergency-box">
+
+<h2>You matter.</h2>
+
+<p id="emergencyMessage">
+
+Moodify is here with you. Don’t worry — we’ve got your back.
+If you're feeling overwhelmed, consider reaching out to a trusted friend,
+family member, or a mental health professional.
+
+</p>
+
+<button onclick="closeEmergency()">I understand</button>
+
+</div>
+
+</div>
+
+<!-- ================= JS ================= -->
+
 <script src="/static/script.js" defer></script>
 
 </body>
