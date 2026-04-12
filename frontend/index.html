@@ -66,8 +66,11 @@
         placeholder="Search song or artist..."
     />
 
-    <button id="searchPlayBtn" title="Search & Play">
-        GO
+    <button id="searchPlayBtn" title="Search &amp; Play">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
     </button>
 
 </div>
@@ -154,7 +157,7 @@ value="60"
 
 <div class="wellbeing-box">
 
-Wellbeing:
+<span class="wellbeing-pulse">💚</span> Wellbeing:
 <span id="wellbeingScore">--</span>
 
 </div>
@@ -171,7 +174,7 @@ Wellbeing:
 
 <div id="controls">
 
-<button class="iconBtn" id="cameraBtn">
+<button class="iconBtn" id="cameraBtn" title="Toggle Camera">
 <img src="/static/camera.svg">
 </button>
 
@@ -193,6 +196,50 @@ autocomplete="off"
 </div>
 
 </main>
+
+<!-- ================= CAMERA MODAL ================= -->
+
+<div id="cameraModal" class="cameraModal hidden">
+
+<div class="cameraBox">
+
+<div class="camera-header">
+<span>📷 Live Emotion Detection</span>
+<button id="closeCameraBtn" class="camera-close-btn">✕</button>
+</div>
+
+<div class="camera-feed-wrapper">
+<img id="videoFeed" src="" alt="Camera feed" />
+<div id="cameraLoading" class="camera-loading">
+<div class="camera-spinner"></div>
+<p>Starting camera...</p>
+</div>
+</div>
+
+<div class="camera-stats">
+
+<div class="cam-stat">
+<span class="cam-stat-label">😶 Emotion</span>
+<span id="camEmotion" class="cam-stat-value">--</span>
+</div>
+
+<div class="cam-stat">
+<span class="cam-stat-label">💚 Wellbeing</span>
+<span id="camWellbeing" class="cam-stat-value">--</span>
+</div>
+
+<div class="cam-stat risk-stat">
+<span class="cam-stat-label">⚠️ Risk</span>
+<span id="camRisk" class="cam-stat-value">--</span>
+</div>
+
+</div>
+
+<div id="camMessage" class="cam-message">Detecting your emotion...</div>
+
+</div>
+
+</div>
 
 <!-- ================= VOICE MODAL ================= -->
 
@@ -236,7 +283,7 @@ Press <strong>Q</strong> to exit voice assistant
 
 <p id="emergencyMessage">
 
-Moodify is here with you. Don’t worry — we’ve got your back.
+Moodify is here with you. Don't worry — we've got your back.
 If you're feeling overwhelmed, consider reaching out to a trusted friend,
 family member, or a mental health professional.
 

@@ -20,6 +20,24 @@ let isPlaying = false
 
 let searchLock = false
 
+/* =========================================================
+   PAGE INIT — stop any lingering camera session immediately
+=========================================================*/
+fetch("/stop-camera").catch(() => {});
+
+// Force-hide the modal and reset any stale DOM state on load
+document.addEventListener("DOMContentLoaded", () => {
+    const m = document.getElementById("cameraModal");
+    const v = document.getElementById("videoFeed");
+    if (m) m.classList.add("hidden");
+    if (v) v.src = "";
+});
+
+window.addEventListener("beforeunload", () => {
+    fetch("/stop-camera").catch(() => {});
+});
+
+
 /* ================= DOM ELEMENTS ================= */
 
 const chat = document.getElementById("chat")
@@ -41,31 +59,95 @@ if(sendBtn){
 }
 
 /* =========================================================
-   CAMERA BUTTON
+   CAMERA MODAL
 =========================================================*/
 
-const cameraBtn = document.getElementById("cameraBtn");
+const cameraBtn    = document.getElementById("cameraBtn");
+const cameraModal  = document.getElementById("cameraModal");
+const closeCameraBtn = document.getElementById("closeCameraBtn");
+const videoFeed    = document.getElementById("videoFeed");
+const cameraLoading = document.getElementById("cameraLoading");
 
-if(cameraBtn){
+let cameraStateInterval = null;
+let cameraOpen = false;
 
-    cameraBtn.addEventListener("click", async () => {
+function openCamera() {
+    if (cameraOpen) return;
+    cameraOpen = true;
 
-        try{
+    cameraModal.classList.remove("hidden");
+    cameraBtn.classList.add("cam-active");
+    cameraLoading.classList.remove("hide");
 
-            await fetch("/start-camera");
+    // Start MJPEG stream — browser handles it natively via img src
+    videoFeed.src = "/video-feed";
 
-            addMessage("📷 Camera started", "bot");
+    // Hide spinner once first frame loads
+    videoFeed.onload = () => {
+        cameraLoading.classList.add("hide");
+    };
 
-        }
-        catch(err){
+    // Poll emotion state every 2 seconds
+    cameraStateInterval = setInterval(async () => {
+        try {
+            const res  = await fetch("/camera-state");
+            const data = await res.json();
 
-            addMessage("Camera could not start.", "bot");
+            const emotionEl   = document.getElementById("camEmotion");
+            const wellbeingEl = document.getElementById("camWellbeing");
+            const riskEl      = document.getElementById("camRisk");
+            const msgEl       = document.getElementById("camMessage");
 
-        }
+            if (emotionEl)   emotionEl.textContent   = data.emotion   || "--";
+            if (wellbeingEl) wellbeingEl.textContent  = data.wellbeing !== "--" ? data.wellbeing + "%" : "--";
+            if (riskEl) {
+                riskEl.textContent        = data.risk || "--";
+                riskEl.dataset.risk       = data.risk || "LOW";
+            }
+            if (msgEl && data.message)  msgEl.textContent = data.message;
 
-    });
+            // Sync wellbeing score in topbar too
+            const topScore = document.getElementById("wellbeingScore");
+            if (topScore && data.wellbeing !== "--") topScore.textContent = data.wellbeing;
 
+        } catch(e) { /* ignore */ }
+    }, 2000);
 }
+
+function closeCamera() {
+    if (!cameraOpen) return;
+    cameraOpen = false;
+
+    // Stop the stream
+    videoFeed.src = "";
+    cameraModal.classList.add("hidden");
+    cameraBtn.classList.remove("cam-active");
+    cameraLoading.classList.remove("hide");
+
+    clearInterval(cameraStateInterval);
+    cameraStateInterval = null;
+
+    // Tell backend to stop camera
+    fetch("/stop-camera").catch(() => {});
+}
+
+if (cameraBtn) {
+    cameraBtn.addEventListener("click", () => {
+        cameraOpen ? closeCamera() : openCamera();
+    });
+}
+
+if (closeCameraBtn) {
+    closeCameraBtn.addEventListener("click", closeCamera);
+}
+
+// Close on backdrop click
+if (cameraModal) {
+    cameraModal.addEventListener("click", (e) => {
+        if (e.target === cameraModal) closeCamera();
+    });
+}
+
 
 /* =========================================================
    MIC BUTTON
@@ -564,7 +646,7 @@ if(prevBtn){
 }
 
 /* =========================================================
-   MINI PLAYER HOVER
+   MINI PLAYER HOVER + CLICK OUTSIDE TO CLOSE
 =========================================================*/
 
 const spotifyIcon=document.getElementById("spotifyIcon")
@@ -572,58 +654,57 @@ const miniPlayer=document.getElementById("miniPlayer")
 
 let closeTimer=null
 
+function closeMiniPlayer() {
+    if (closeTimer) clearTimeout(closeTimer)
+    miniPlayer.classList.remove("active")
+}
+
 if(spotifyIcon && miniPlayer){
 
+    // Open on hover
     spotifyIcon.addEventListener("mouseenter",()=>{
-
         miniPlayer.classList.add("active")
-
-        if(closeTimer){
-            clearTimeout(closeTimer)
-        }
-
+        if(closeTimer) clearTimeout(closeTimer)
     })
 
-    spotifyIcon.addEventListener("mouseleave",()=>{
-
-        closeTimer=setTimeout(()=>{
-
-            if(!miniPlayer.matches(":hover")){
-                miniPlayer.classList.remove("active")
-            }
-
-        },5000)
-
-    })
-
+    // Keep open while hovering player
     miniPlayer.addEventListener("mouseenter",()=>{
+        if(closeTimer) clearTimeout(closeTimer)
+    })
 
-        if(closeTimer){
-            clearTimeout(closeTimer)
-        }
-
+    // Gentle close when mouse leaves BOTH icon & player
+    spotifyIcon.addEventListener("mouseleave",()=>{
+        closeTimer=setTimeout(()=>{
+            if(!miniPlayer.matches(":hover")) closeMiniPlayer()
+        },400)
     })
 
     miniPlayer.addEventListener("mouseleave",()=>{
-
         closeTimer=setTimeout(()=>{
-
-            miniPlayer.classList.remove("active")
-
-        },5000)
-
+            if(!spotifyIcon.matches(":hover")) closeMiniPlayer()
+        },400)
     })
 
+    // Click the icon → go to Spotify login
     spotifyIcon.addEventListener("click",(e)=>{
-
         e.preventDefault()
         e.stopPropagation()
-
         window.location.href="/spotify-login"
-
     })
 
 }
+
+// ── Click OUTSIDE closes the mini player ──
+document.addEventListener("click",(e)=>{
+    if(!miniPlayer || !spotifyIcon) return
+    if(!miniPlayer.classList.contains("active")) return
+
+    const clickedInside = miniPlayer.contains(e.target) || spotifyIcon.contains(e.target)
+    if(!clickedInside){
+        closeMiniPlayer()
+    }
+})
+
 
 /* =========================================================
    VOLUME

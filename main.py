@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
+from fastapi.responses import FileResponse, RedirectResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 import subprocess
 import sys
+import camera_stream
 
 from spotify_service import (
     search_track,
@@ -157,17 +158,25 @@ def face_support(data: FaceEmotionInput):
 
 # ================= CAMERA =================
 
-@app.get("/start-camera")
-def start_camera():
-    try:
-        subprocess.Popen(
-            [sys.executable, "live_face_emotion.py"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        return {"status": "camera started"}
-    except Exception as e:
-        return {"status": "error", "detail": str(e)}
+@app.get("/video-feed")
+def video_feed():
+    """MJPEG stream — embed directly in browser via <img src='/video-feed'>."""
+    return StreamingResponse(
+        camera_stream.generate_frames(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+    )
+
+
+@app.get("/camera-state")
+def camera_state():
+    """Returns latest detected emotion, wellbeing score, risk and AI message."""
+    return camera_stream.get_state()
+
+
+@app.get("/stop-camera")
+def stop_camera():
+    camera_stream.stop_camera()
+    return {"status": "camera stopped"}
 
 
 # ================= VOICE =================
