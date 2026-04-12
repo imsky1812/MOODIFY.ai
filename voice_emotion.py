@@ -25,7 +25,7 @@ def record_audio():
     Record audio from microphone and save as WAV.
     """
 
-    print("🎤 Speak now...")
+    print("Speak now...")
 
     try:
 

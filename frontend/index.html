@@ -247,27 +247,25 @@ autocomplete="off"
 
 <div class="voiceBox">
 
+<div class="voice-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px;">
 <h3>🎙 Voice Mode</h3>
+<button id="closeVoiceBtn" class="camera-close-btn" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: white;">✕</button>
+</div>
 
 <div id="voiceStatus">
 Tap Start to Speak
 </div>
 
 <div id="voiceIndicator" class="indicator hidden">
-🔊
+<div class="wellbeing-pulse" style="font-size: 2rem;">🎙</div>
 </div>
 
-<div class="voiceControls">
+<div class="voiceControls" style="display: flex; gap: 10px; margin-top: 15px;">
 
 <button id="startVoiceBtn">Start</button>
-
-<button id="closeVoiceBtn">Exit</button>
+<button id="stopVoiceBtn" class="hidden">Stop</button>
 
 </div>
-
-<p class="exitHint">
-Press <strong>Q</strong> to exit voice assistant
-</p>
 
 </div>
 

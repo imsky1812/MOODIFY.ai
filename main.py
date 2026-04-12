@@ -185,8 +185,9 @@ def stop_camera():
 def start_voice():
     if not hasattr(app.state, "voice_running") or not app.state.voice_running:
         app.state.voice_running = True
-
-        subprocess.Popen(
+        
+        # Start voice assistant as a subprocess and keep reference
+        app.state.voice_process = subprocess.Popen(
             [sys.executable, "voice_assistant.py"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -226,6 +227,19 @@ def voice_cycle():
 def stop_voice():
     global voice_session_active
     voice_session_active = False
+    
+    # Terminate the subprocess if running
+    if hasattr(app.state, "voice_running") and app.state.voice_running:
+        try:
+            if hasattr(app.state, "voice_process") and app.state.voice_process:
+                app.state.voice_process.terminate()
+                app.state.voice_process.wait(timeout=2)
+        except Exception as e:
+            print("Error terminating voice process:", e)
+        
+        app.state.voice_running = False
+        app.state.voice_process = None
+
     return {"status": "stopped"}
 
 

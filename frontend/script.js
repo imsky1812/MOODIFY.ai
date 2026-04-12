@@ -156,50 +156,71 @@ if (cameraModal) {
 const voiceBtn = document.getElementById("voiceBtn");
 const voiceModal = document.getElementById("voiceModal");
 const startVoiceBtn = document.getElementById("startVoiceBtn");
+const stopVoiceBtn = document.getElementById("stopVoiceBtn");
 const closeVoiceBtn = document.getElementById("closeVoiceBtn");
 const voiceStatus = document.getElementById("voiceStatus");
+const voiceIndicator = document.getElementById("voiceIndicator");
+
+let isVoiceActive = false;
+
+function resetVoiceUI() {
+    isVoiceActive = false;
+    voiceStatus.innerText = "Tap Start to Speak";
+    voiceIndicator.classList.add("hidden");
+    startVoiceBtn.classList.remove("hidden");
+    stopVoiceBtn.classList.add("hidden");
+}
+
+async function stopVoiceSession() {
+    if (!isVoiceActive) return;
+    try {
+        await fetch("/stop-voice");
+    } catch (err) {
+        console.error(err);
+    }
+    resetVoiceUI();
+}
 
 if(voiceBtn){
-
     voiceBtn.addEventListener("click", () => {
-
         voiceModal.classList.remove("hidden");
-
     });
-
 }
 
 if(closeVoiceBtn){
-
-    closeVoiceBtn.addEventListener("click", () => {
-
+    closeVoiceBtn.addEventListener("click", async () => {
+        await stopVoiceSession();
         voiceModal.classList.add("hidden");
-
     });
-
 }
 
 if(startVoiceBtn){
-
     startVoiceBtn.addEventListener("click", async () => {
+        voiceStatus.innerText = "Starting engine...";
+        startVoiceBtn.disabled = true;
 
-        voiceStatus.innerText = "Listening...";
-
-        try{
-
+        try {
             await fetch("/start-voice");
-
-            voiceStatus.innerText = "Voice assistant started";
-
-        }
-        catch{
-
+            isVoiceActive = true;
+            voiceStatus.innerText = "Active. Speak now...";
+            voiceIndicator.classList.remove("hidden");
+            startVoiceBtn.classList.add("hidden");
+            stopVoiceBtn.classList.remove("hidden");
+        } catch {
             voiceStatus.innerText = "Voice failed to start";
-
+        } finally {
+            startVoiceBtn.disabled = false;
         }
-
     });
+}
 
+if(stopVoiceBtn){
+    stopVoiceBtn.addEventListener("click", async () => {
+        voiceStatus.innerText = "Stopping...";
+        stopVoiceBtn.disabled = true;
+        await stopVoiceSession();
+        stopVoiceBtn.disabled = false;
+    });
 }
 
 /* =========================================================
