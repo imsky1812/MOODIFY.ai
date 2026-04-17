@@ -209,7 +209,8 @@ autocomplete="off"
 </div>
 
 <div class="camera-feed-wrapper">
-<img id="videoFeed" src="" alt="Camera feed" />
+<video id="videoFeed" autoplay playsinline muted></video>
+<canvas id="videoCanvas" class="hidden"></canvas>
 <div id="cameraLoading" class="camera-loading">
 <div class="camera-spinner"></div>
 <p>Starting camera...</p>

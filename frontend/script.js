@@ -66,12 +66,14 @@ const cameraBtn    = document.getElementById("cameraBtn");
 const cameraModal  = document.getElementById("cameraModal");
 const closeCameraBtn = document.getElementById("closeCameraBtn");
 const videoFeed    = document.getElementById("videoFeed");
+const videoCanvas  = document.getElementById("videoCanvas");
 const cameraLoading = document.getElementById("cameraLoading");
 
 let cameraStateInterval = null;
 let cameraOpen = false;
+let videoStream = null;
 
-function openCamera() {
+async function openCamera() {
     if (cameraOpen) return;
     cameraOpen = true;
 
@@ -79,55 +81,73 @@ function openCamera() {
     cameraBtn.classList.add("cam-active");
     cameraLoading.classList.remove("hide");
 
-    // Start MJPEG stream — browser handles it natively via img src
-    videoFeed.src = "/video-feed";
+    try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        videoFeed.srcObject = videoStream;
 
-    // Hide spinner once first frame loads
-    videoFeed.onload = () => {
-        cameraLoading.classList.add("hide");
-    };
+        videoFeed.onloadedmetadata = () => {
+            cameraLoading.classList.add("hide");
+            
+            videoCanvas.width = videoFeed.videoWidth;
+            videoCanvas.height = videoFeed.videoHeight;
 
-    // Poll emotion state every 2 seconds
-    cameraStateInterval = setInterval(async () => {
-        try {
-            const res  = await fetch("/camera-state");
-            const data = await res.json();
+            // Poll emotion state by sending frame every 2 seconds
+            cameraStateInterval = setInterval(async () => {
+                const ctx = videoCanvas.getContext("2d");
+                ctx.drawImage(videoFeed, 0, 0, videoCanvas.width, videoCanvas.height);
+                const b64_img = videoCanvas.toDataURL("image/jpeg", 0.6);
 
-            const emotionEl   = document.getElementById("camEmotion");
-            const wellbeingEl = document.getElementById("camWellbeing");
-            const riskEl      = document.getElementById("camRisk");
-            const msgEl       = document.getElementById("camMessage");
+                try {
+                    const res = await fetch("/analyze-frame/", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ image: b64_img })
+                    });
+                    
+                    const data = await res.json();
 
-            if (emotionEl)   emotionEl.textContent   = data.emotion   || "--";
-            if (wellbeingEl) wellbeingEl.textContent  = data.wellbeing !== "--" ? data.wellbeing + "%" : "--";
-            if (riskEl) {
-                riskEl.textContent        = data.risk || "--";
-                riskEl.dataset.risk       = data.risk || "LOW";
-            }
-            if (msgEl && data.message)  msgEl.textContent = data.message;
+                    const emotionEl   = document.getElementById("camEmotion");
+                    const wellbeingEl = document.getElementById("camWellbeing");
+                    const riskEl      = document.getElementById("camRisk");
+                    const msgEl       = document.getElementById("camMessage");
 
-            // Sync wellbeing score in topbar too
-            const topScore = document.getElementById("wellbeingScore");
-            if (topScore && data.wellbeing !== "--") topScore.textContent = data.wellbeing;
+                    if (emotionEl)   emotionEl.textContent   = data.emotion   || "--";
+                    if (wellbeingEl) wellbeingEl.textContent  = data.wellbeing !== "--" ? data.wellbeing + "%" : "--";
+                    if (riskEl) {
+                        riskEl.textContent        = data.risk || "--";
+                        riskEl.dataset.risk       = data.risk || "LOW";
+                    }
+                    if (msgEl && data.message)  msgEl.textContent = data.message;
 
-        } catch(e) { /* ignore */ }
-    }, 2000);
+                    const topScore = document.getElementById("wellbeingScore");
+                    if (topScore && data.wellbeing !== "--") topScore.textContent = data.wellbeing;
+
+                } catch(e) { console.error("Camera frame error", e); }
+            }, 2000);
+        };
+    } catch (err) {
+        cameraLoading.innerHTML = `<p>Camera access denied</p>`;
+        console.error("Camera error:", err);
+    }
 }
 
 function closeCamera() {
     if (!cameraOpen) return;
     cameraOpen = false;
 
-    // Stop the stream
-    videoFeed.src = "";
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+    }
+    videoFeed.srcObject = null;
+    
     cameraModal.classList.add("hidden");
     cameraBtn.classList.remove("cam-active");
     cameraLoading.classList.remove("hide");
 
     clearInterval(cameraStateInterval);
     cameraStateInterval = null;
-
-    // Tell backend to stop camera
+    
     fetch("/stop-camera").catch(() => {});
 }
 
@@ -141,7 +161,6 @@ if (closeCameraBtn) {
     closeCameraBtn.addEventListener("click", closeCamera);
 }
 
-// Close on backdrop click
 if (cameraModal) {
     cameraModal.addEventListener("click", (e) => {
         if (e.target === cameraModal) closeCamera();
@@ -162,6 +181,8 @@ const voiceStatus = document.getElementById("voiceStatus");
 const voiceIndicator = document.getElementById("voiceIndicator");
 
 let isVoiceActive = false;
+let mediaRecorder = null;
+let audioChunks = [];
 
 function resetVoiceUI() {
     isVoiceActive = false;
@@ -173,10 +194,8 @@ function resetVoiceUI() {
 
 async function stopVoiceSession() {
     if (!isVoiceActive) return;
-    try {
-        await fetch("/stop-voice");
-    } catch (err) {
-        console.error(err);
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
     }
     resetVoiceUI();
 }
@@ -196,18 +215,63 @@ if(closeVoiceBtn){
 
 if(startVoiceBtn){
     startVoiceBtn.addEventListener("click", async () => {
-        voiceStatus.innerText = "Starting engine...";
+        voiceStatus.innerText = "Connecting microphone...";
         startVoiceBtn.disabled = true;
 
         try {
-            await fetch("/start-voice");
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            
+            mediaRecorder.ondataavailable = (event) => {
+                if(event.data.size > 0) audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                audioChunks = []; // reset
+                stream.getTracks().forEach(t => t.stop()); // close mic
+
+                voiceStatus.innerText = "Analyzing audio...";
+                
+                // POST to backend
+                const formData = new FormData();
+                formData.append("audio", audioBlob, "voice.webm");
+
+                try {
+                    const res = await fetch("/analyze-audio/", {
+                        method: "POST",
+                        body: formData
+                    });
+                    const data = await res.json();
+                    
+                    if (data.text) {
+                       addMessage(data.text, "user"); 
+                       addMessage(data.reply, "bot");
+                       
+                       // Text to speech locally
+                       const utterance = new SpeechSynthesisUtterance(data.reply);
+                       window.speechSynthesis.speak(utterance);
+                    }
+                    
+                    voiceStatus.innerText = "Tap Start to Speak again";
+                    
+                } catch(e) {
+                    console.error("Audio post failed", e);
+                    voiceStatus.innerText = "Network Error";
+                }
+            };
+            
+            mediaRecorder.start();
+
             isVoiceActive = true;
-            voiceStatus.innerText = "Active. Speak now...";
+            voiceStatus.innerText = "Active. Speak now (Tap Stop when done)...";
             voiceIndicator.classList.remove("hidden");
             startVoiceBtn.classList.add("hidden");
             stopVoiceBtn.classList.remove("hidden");
-        } catch {
-            voiceStatus.innerText = "Voice failed to start";
+            
+        } catch(err) {
+            console.error("Mic denied", err);
+            voiceStatus.innerText = "Microphone access denied.";
         } finally {
             startVoiceBtn.disabled = false;
         }
@@ -216,7 +280,7 @@ if(startVoiceBtn){
 
 if(stopVoiceBtn){
     stopVoiceBtn.addEventListener("click", async () => {
-        voiceStatus.innerText = "Stopping...";
+        voiceStatus.innerText = "Processing...";
         stopVoiceBtn.disabled = true;
         await stopVoiceSession();
         stopVoiceBtn.disabled = false;

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
@@ -158,88 +158,66 @@ def face_support(data: FaceEmotionInput):
 
 # ================= CAMERA =================
 
-@app.get("/video-feed")
-def video_feed():
-    """MJPEG stream — embed directly in browser via <img src='/video-feed'>."""
-    return StreamingResponse(
-        camera_stream.generate_frames(),
-        media_type="multipart/x-mixed-replace; boundary=frame",
-    )
+class FrameInput(BaseModel):
+    image: str
+
+@app.post("/analyze-frame/")
+def analyze_frame(data: FrameInput):
+    # Only processes 1 fps internally to avoid lag
+    emotion = camera_stream.analyze_base64_frame(data.image)
+    
+    # State tracking
+    current_state = camera_stream.get_state()
+    
+    if emotion != current_state["emotion"] and emotion != "Detecting...":
+        score, risk = calculate_stress_score("neutral", emotion)
+        msg = generate_support_message(f"I am feeling {emotion}", emotion)
+        camera_stream.update_state(score, risk, msg)
+        
+    return camera_stream.get_state()
 
 
 @app.get("/camera-state")
-def camera_state():
-    """Returns latest detected emotion, wellbeing score, risk and AI message."""
+def get_camera_state():
     return camera_stream.get_state()
 
 
 @app.get("/stop-camera")
 def stop_camera():
-    camera_stream.stop_camera()
     return {"status": "camera stopped"}
 
 
 # ================= VOICE =================
 
-@app.get("/start-voice")
-def start_voice():
-    if not hasattr(app.state, "voice_running") or not app.state.voice_running:
-        app.state.voice_running = True
+import tempfile
+import os
+
+@app.post("/analyze-audio/")
+async def analyze_audio(audio: UploadFile = File(...)):
+    
+    fd, path = tempfile.mkstemp(suffix=".webm")
+    try:
+        with os.fdopen(fd, 'wb') as f:
+            f.write(await audio.read())
+            
+        from voice_emotion import speech_to_text
+        text = speech_to_text(path)
         
-        # Start voice assistant as a subprocess and keep reference
-        app.state.voice_process = subprocess.Popen(
-            [sys.executable, "voice_assistant.py"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-
-    return {"status": "voice started"}
-
-
-@app.get("/voice-cycle")
-def voice_cycle():
-
-    global voice_session_active
-    voice_session_active = True
-
-    # Lazy imports (only used when voice enabled)
-    from voice_emotion import record_audio, speech_to_text
-
-    if not voice_session_active:
-        return {"text": "", "reply": ""}
-
-    record_audio()
-    text = speech_to_text()
-
-    if not text:
-        return {"text": "", "reply": ""}
-
-    emotion = detect_text_emotion(text)
-    response = generate_support_message(text, emotion)
-
-    return {
-        "text": text,
-        "reply": response,
-    }
-
+        if text:
+            emotion = detect_text_emotion(text)
+            reply = generate_support_message(text, emotion)
+            return {"text": text, "reply": reply}
+            
+    except Exception as e:
+        print("Audio error:", e)
+    finally:
+        if os.path.exists(path):
+            os.remove(path)
+            
+    return {"text": "", "reply": "I couldn't catch that, could you repeat?"}
 
 @app.get("/stop-voice")
 def stop_voice():
-    global voice_session_active
-    voice_session_active = False
-    
-    # Terminate the subprocess if running
-    if hasattr(app.state, "voice_running") and app.state.voice_running:
-        try:
-            if hasattr(app.state, "voice_process") and app.state.voice_process:
-                app.state.voice_process.terminate()
-                app.state.voice_process.wait(timeout=2)
-        except Exception as e:
-            print("Error terminating voice process:", e)
-        
-        app.state.voice_running = False
-        app.state.voice_process = None
-
     return {"status": "stopped"}
 
 

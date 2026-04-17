@@ -1451,3 +1451,132 @@ body{
     }
 }
 
+/* ================= MOBILE RESPONSIVENESS ================= */
+
+@media (max-width: 768px) {
+    /* Global fixes for mobile devices (avoids search bar clipping etc.) */
+    body {
+        height: 100dvh; 
+        padding-top: 70px; /* Adjust top padding for a smaller topbar */
+    }
+
+    /* Topbar & brand */
+    .topbar {
+        height: 60px;
+        padding: 0 15px;
+    }
+
+    .logo {
+        width: 28px;
+        height: 28px;
+    }
+
+    .app-title {
+        font-size: 20px;
+    }
+
+    .wellbeing-box {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    /* Chat Area */
+    #chat-container {
+        height: calc(100dvh - 60px);
+    }
+
+    #chat {
+        padding: 15px;
+    }
+
+    .user, .bot {
+        max-width: 90%;
+        padding: 10px 14px;
+        font-size: 14px;
+    }
+    
+    .bot-typing {
+        padding: 10px 14px;
+        min-width: 45px;
+        min-height: 32px;
+    }
+
+    /* Control area */
+    #controls {
+        padding: 12px;
+        gap: 8px;
+    }
+
+    .iconBtn {
+        width: 38px;
+        height: 38px;
+    }
+
+    .iconBtn img {
+        width: 28px;
+        height: 28px;
+    }
+
+    #userInput {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    #sendBtn {
+        width: 40px;
+        height: 40px;
+    }
+
+    #sendIcon {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Modals (shared sizing) */
+    .cameraBox, .voiceBox, .emergency-box {
+        width: 95%;
+        max-width: 400px;
+        padding: 20px;
+    }
+    
+    .cameraBox {
+        padding: 0; /* Removing padding for camera box structure to fill */
+    }
+
+    /* Adjust font size and layout within Modals */
+    .cam-stat-value {
+        font-size: 13px;
+    }
+
+    .cam-stat-label {
+        font-size: 10px;
+    }
+
+    .camera-stats {
+        padding: 10px;
+        flex-wrap: wrap; 
+    }
+
+    /* Spotify Mini Player */
+    #miniPlayer {
+        top: 70px;
+        width: 90%;
+        max-width: 320px;
+        padding: 15px;
+    }
+
+    #trackImage {
+        width: 140px;
+        height: 140px;
+    }
+    
+    .play-btn {
+        width: 50px;
+        height: 50px;
+    }
+
+    #musicSearch {
+        padding: 10px;
+        font-size: 13px;
+    }
+}

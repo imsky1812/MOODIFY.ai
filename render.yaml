@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: emoticare-backend
+    env: docker
+    region: ohio
+    plan: free
+    branch: main
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      - key: SPOTIFY_REDIRECT_URI
+        sync: false # Make sure to configure this inside the Render dashboard when it spins up!
