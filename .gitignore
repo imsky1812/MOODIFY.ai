@@ -48,3 +48,16 @@ node_modules/
 # OS files
 
 *.swp
+
+# Audio files (never commit user audio)
+
+*.wav
+*.mp3
+*.webm
+*.ogg
+*.m4a
+*.flac
+
+# Spotify OAuth cache
+
+.spotify_cache
