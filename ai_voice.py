@@ -8,7 +8,7 @@ from playsound import playsound
 # ================= ENGINE INIT =================
 
 _voice_lock = threading.Lock()
-VOICE_NAME = "hi-IN-SwaraNeural"
+VOICE_NAME = "en-IN-NeerjaNeural"
 
 def _init_engine():
     """Initialize TTS engine once. edge-tts doesn't need much init."""

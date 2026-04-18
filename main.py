@@ -196,25 +196,57 @@ import os
 async def analyze_audio(audio: UploadFile = File(...)):
     
     fd, path = tempfile.mkstemp(suffix=".webm")
+    wav_path = path[:-5] + ".wav"
     try:
         with os.fdopen(fd, 'wb') as f:
             f.write(await audio.read())
             
+        # Convert webm to wav because SpeechRecognition requires PCM WAV
+        result = subprocess.run(
+            ["ffmpeg", "-y", "-i", path, "-ac", "1", "-ar", "16000", wav_path],
+            stdout=subprocess.DEVNULL, 
+            stderr=subprocess.PIPE
+        )
+        if result.returncode != 0:
+            print("FFmpeg error:", result.stderr.decode('utf-8', errors='ignore'))
+            
         from voice_emotion import speech_to_text
-        text = speech_to_text(path)
+        text = speech_to_text(wav_path)
         
         if text:
             emotion = detect_text_emotion(text)
             reply = generate_support_message(text, emotion)
-            return {"text": text, "reply": reply}
+        else:
+            text = ""
+            reply = "I couldn't catch that, could you please repeat?"
+            
+        # Generate Edge TTS audio
+        import base64
+        from ai_voice import _save_audio
+        fd2, speech_path = tempfile.mkstemp(suffix=".mp3")
+        os.close(fd2)
+        try:
+            await _save_audio(reply, speech_path)
+            with open(speech_path, "rb") as bf:
+                audio_b64 = base64.b64encode(bf.read()).decode("utf-8")
+        except Exception as tts_err:
+            print("TTS error:", tts_err)
+            audio_b64 = ""
+        finally:
+            if os.path.exists(speech_path):
+                os.remove(speech_path)
+                
+        return {"text": text, "reply": reply, "audio_b64": audio_b64}
             
     except Exception as e:
         print("Audio error:", e)
     finally:
         if os.path.exists(path):
             os.remove(path)
+        if os.path.exists(wav_path):
+            os.remove(wav_path)
             
-    return {"text": "", "reply": "I couldn't catch that, could you repeat?"}
+    return {"text": "", "reply": "I couldn't catch that, could you please repeat?", "audio_b64": ""}
 
 @app.get("/stop-voice")
 def stop_voice():

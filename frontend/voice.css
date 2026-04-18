@@ -1,0 +1,101 @@
+/* ================= VOICE MODAL V2 (VAD) ================= */
+
+.voiceBox {
+    background: linear-gradient(145deg, rgba(30,41,59,0.85), rgba(15,23,42,0.95)) !important;
+    -webkit-backdrop-filter: blur(25px) !important;
+    backdrop-filter: blur(25px) !important;
+    padding: 35px 25px !important;
+    border-radius: 28px !important;
+    text-align: center !important;
+    width: 380px !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.05) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 20px !important;
+}
+
+.voice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.voice-header h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #a02be8, #07bbbb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0;
+}
+
+.voice-visualizer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 140px;
+    width: 100%;
+    margin-top: -15px;
+}
+
+.siri-orb {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #a855f7, #06b6d4, #1e3a8a);
+    box-shadow: 0 0 20px #06b6d4, 0 0 40px #a855f7, inset 0 0 20px rgba(255,255,255,0.8);
+    transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+    animation: orbFloat 4s ease-in-out infinite alternate;
+}
+
+.listening .siri-orb {
+    animation: orbListen 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes orbListen {
+    0% { transform: scale(1); box-shadow: 0 0 20px #06b6d4, 0 0 60px #a855f7; }
+    100% { transform: scale(1.25); box-shadow: 0 0 50px #06b6d4, 0 0 100px #a855f7, inset 0 0 40px rgba(255,255,255,0.8); }
+}
+
+@keyframes orbFloat {
+    0% { transform: translateY(-5px); }
+    100% { transform: translateY(5px); }
+}
+
+.voice-status {
+    font-size: 15px;
+    color: rgba(255,255,255,0.9);
+    letter-spacing: 0.5px;
+    min-height: 24px;
+    margin: 10px 0;
+}
+
+.premium-btn {
+    background: linear-gradient(135deg, #7c3aed, #06b6d4);
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 30px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 5px 20px rgba(124, 58, 237, 0.4);
+    transition: all 0.3s ease;
+    width: 80%;
+}
+
+.premium-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(6, 182, 212, 0.6);
+}
+
+.premium-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}

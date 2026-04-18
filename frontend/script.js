@@ -175,29 +175,84 @@ if (cameraModal) {
 const voiceBtn = document.getElementById("voiceBtn");
 const voiceModal = document.getElementById("voiceModal");
 const startVoiceBtn = document.getElementById("startVoiceBtn");
-const stopVoiceBtn = document.getElementById("stopVoiceBtn");
+const stopVoiceBtn = document.getElementById("stopVoiceBtn"); // Hidden dummy for legacy compatibility
 const closeVoiceBtn = document.getElementById("closeVoiceBtn");
 const voiceStatus = document.getElementById("voiceStatus");
-const voiceIndicator = document.getElementById("voiceIndicator");
+const siriOrb = document.getElementById("siriOrb");
+const voiceVisualizer = document.getElementById("voiceVisualizer");
 
 let isVoiceActive = false;
+let isProcessingAudio = false;
 let mediaRecorder = null;
 let audioChunks = [];
+let audioContext = null;
+let analyser = null;
+let microphone = null;
+let vadTimer = null;
+let vadSilenceTimer = null;
+let micStream = null;
 
 function resetVoiceUI() {
     isVoiceActive = false;
-    voiceStatus.innerText = "Tap Start to Speak";
-    voiceIndicator.classList.add("hidden");
-    startVoiceBtn.classList.remove("hidden");
-    stopVoiceBtn.classList.add("hidden");
+    isProcessingAudio = false;
+    voiceStatus.innerText = "Tap Start to activate microphone";
+    if (voiceVisualizer) voiceVisualizer.classList.add("hidden");
+    if (startVoiceBtn) startVoiceBtn.classList.remove("hidden");
+    if (siriOrb) siriOrb.classList.remove("listening");
 }
 
 async function stopVoiceSession() {
-    if (!isVoiceActive) return;
+    if (vadTimer) cancelAnimationFrame(vadTimer);
+    if (vadSilenceTimer) clearTimeout(vadSilenceTimer);
+    
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
         mediaRecorder.stop();
     }
+    
+    if (micStream) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+    }
     resetVoiceUI();
+}
+
+async function processAudioRecording() {
+    isProcessingAudio = true;
+    isVoiceActive = false;
+    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+    audioChunks = [];
+    
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "voice.webm");
+
+    try {
+        const res = await fetch("/analyze-audio/", { method: "POST", body: formData });
+        const data = await res.json();
+        
+        if (data.text) {
+           addMessage(data.text, "user"); 
+        }
+        if (data.reply) {
+           addMessage(data.reply, "bot");
+           
+           if (data.audio_b64) {
+               const audio = new Audio("data:audio/mp3;base64," + data.audio_b64);
+               audio.onended = () => { isProcessingAudio = false; voiceStatus.innerText = "Speak when ready..."; };
+               audio.play().catch(e => { console.error("Audio playback failed:", e); isProcessingAudio = false; voiceStatus.innerText = "Speak when ready..."; });
+           } else {
+               const utterance = new SpeechSynthesisUtterance(data.reply);
+               utterance.onend = () => { isProcessingAudio = false; voiceStatus.innerText = "Speak when ready..."; };
+               window.speechSynthesis.speak(utterance);
+           }
+        } else {
+            isProcessingAudio = false;
+            voiceStatus.innerText = "Speak when ready...";
+        }
+    } catch(e) {
+        console.error("Audio post failed", e);
+        voiceStatus.innerText = "Network Error";
+        isProcessingAudio = false;
+    }
 }
 
 if(voiceBtn){
@@ -215,75 +270,82 @@ if(closeVoiceBtn){
 
 if(startVoiceBtn){
     startVoiceBtn.addEventListener("click", async () => {
-        voiceStatus.innerText = "Connecting microphone...";
+        voiceStatus.innerText = "Initializing AI Voice...";
         startVoiceBtn.disabled = true;
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
-            mediaRecorder.ondataavailable = (event) => {
-                if(event.data.size > 0) audioChunks.push(event.data);
-            };
-
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                audioChunks = []; // reset
-                stream.getTracks().forEach(t => t.stop()); // close mic
-
-                voiceStatus.innerText = "Analyzing audio...";
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            microphone = audioContext.createMediaStreamSource(micStream);
+            microphone.connect(analyser);
+            analyser.fftSize = 512;
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            let isUserSpeaking = false;
+            
+            function detectSilence() {
+                if(voiceModal.classList.contains("hidden")) return;
+                vadTimer = requestAnimationFrame(detectSilence);
                 
-                // POST to backend
-                const formData = new FormData();
-                formData.append("audio", audioBlob, "voice.webm");
+                if (isProcessingAudio) return;
 
-                try {
-                    const res = await fetch("/analyze-audio/", {
-                        method: "POST",
-                        body: formData
-                    });
-                    const data = await res.json();
-                    
-                    if (data.text) {
-                       addMessage(data.text, "user"); 
-                       addMessage(data.reply, "bot");
-                       
-                       // Text to speech locally
-                       const utterance = new SpeechSynthesisUtterance(data.reply);
-                       window.speechSynthesis.speak(utterance);
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for(let i=0; i<bufferLength; i++) sum += dataArray[i];
+                let average = sum / bufferLength;
+                
+                if (average > 15) {
+                    if (!isUserSpeaking) {
+                        isUserSpeaking = true;
+                        siriOrb.classList.add("listening");
+                        voiceStatus.innerText = "Listening...";
+                        
+                        if(!isVoiceActive || (mediaRecorder && mediaRecorder.state === "inactive")) {
+                            audioChunks = [];
+                            mediaRecorder = new MediaRecorder(micStream, { mimeType: 'audio/webm' });
+                            mediaRecorder.ondataavailable = (e) => { if(e.data.size > 0) audioChunks.push(e.data); };
+                            mediaRecorder.onstop = processAudioRecording;
+                            mediaRecorder.start();
+                            isVoiceActive = true;
+                        }
                     }
-                    
-                    voiceStatus.innerText = "Tap Start to Speak again";
-                    
-                } catch(e) {
-                    console.error("Audio post failed", e);
-                    voiceStatus.innerText = "Network Error";
+                    if(vadSilenceTimer) {
+                        clearTimeout(vadSilenceTimer);
+                        vadSilenceTimer = null;
+                    }
+                } else {
+                    if (isUserSpeaking) {
+                        if(!vadSilenceTimer) {
+                            vadSilenceTimer = setTimeout(() => {
+                                isUserSpeaking = false;
+                                siriOrb.classList.remove("listening");
+                                voiceStatus.innerText = "Processing...";
+                                
+                                if(isVoiceActive && mediaRecorder && mediaRecorder.state !== "inactive") {
+                                    mediaRecorder.stop();
+                                }
+                            }, 1500);
+                        }
+                    }
                 }
-            };
+            }
             
-            mediaRecorder.start();
-
-            isVoiceActive = true;
-            voiceStatus.innerText = "Active. Speak now (Tap Stop when done)...";
-            voiceIndicator.classList.remove("hidden");
             startVoiceBtn.classList.add("hidden");
-            stopVoiceBtn.classList.remove("hidden");
+            if (voiceVisualizer) voiceVisualizer.classList.remove("hidden");
+            voiceStatus.innerText = "Speak when ready...";
+            detectSilence();
             
         } catch(err) {
             console.error("Mic denied", err);
             voiceStatus.innerText = "Microphone access denied.";
+            startVoiceBtn.classList.remove("hidden");
         } finally {
             startVoiceBtn.disabled = false;
         }
-    });
-}
-
-if(stopVoiceBtn){
-    stopVoiceBtn.addEventListener("click", async () => {
-        voiceStatus.innerText = "Processing...";
-        stopVoiceBtn.disabled = true;
-        await stopVoiceSession();
-        stopVoiceBtn.disabled = false;
     });
 }
 

@@ -134,8 +134,11 @@ Avoid unnecessary English words.
         language_instruction = """
 Language: Hinglish
 
-Speak naturally like an Indian college friend.
+Speak naturally like an empathetic Indian friend.
 Hindi written in English script.
+Use frequent punctuations (commas, periods) to ensure natural speech pauses.
+Keep sentences short. No run-on sentences.
+Do NOT use any emojis or markdown symbols.
 Avoid excessive slang.
 """
 
