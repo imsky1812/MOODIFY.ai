@@ -47,7 +47,7 @@ def _load_model():
 
 
 # Load model immediately when module imports
-_load_model()
+# _load_model() # Removed to prevent Render timeout
 
 
 # ================= EMOTION DETECTION =================
@@ -59,6 +59,8 @@ def detect_text_emotion(text: str) -> str:
     Returns:
         str: emotion label
     """
+    
+    _load_model() # Lazy load on first request
 
     if not text or not isinstance(text, str):
         return "neutral"

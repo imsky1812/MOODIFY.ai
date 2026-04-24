@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import base64
-from deepface import DeepFace
 from collections import deque
 import time
 
@@ -56,6 +55,7 @@ def analyze_base64_frame(b64_string):
         if frame is None:
             return last_emotion
 
+        from deepface import DeepFace
         # Run DeepFace
         result = DeepFace.analyze(
             frame,

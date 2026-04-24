@@ -1,60 +1,56 @@
 # ===== MOODIFY.ai Requirements =====
-# Cleaned — removed Flask, redis, openai (unused), kept only what the app needs
+
+# ── CPU Only Wheels ──
+--extra-index-url https://download.pytorch.org/whl/cpu
 
 # ── Web Framework ──
-fastapi==0.129.0
-uvicorn==0.41.0
-starlette==0.52.1
-python-multipart==0.0.22
+fastapi
+uvicorn
+starlette
+python-multipart
 
 # ── Environment ──
-python-dotenv==1.2.1
+python-dotenv
 
 # ── AI / LLM ──
-groq==1.0.0
-transformers==5.2.0
-torch==2.10.0
-tokenizers==0.22.2
-safetensors==0.7.0
-huggingface_hub==1.4.1
-
-# ── Text Emotion Detection ──
-# (DistilRoBERTa via HuggingFace pipeline)
-# No extra package needed beyond transformers + torch
+groq
+transformers
+torch
+tokenizers
+safetensors
+huggingface_hub
 
 # ── Face Emotion Detection ──
-deepface==0.0.79
-opencv-python-headless==4.8.1.78
-retina-face==0.0.17
-mtcnn==1.0.0
-pillow==12.1.1
+deepface
+tensorflow-cpu
+tf-keras
+opencv-python-headless
+retina-face
+mtcnn
+pillow
 
 # ── Language Detection ──
-langdetect==1.0.9
+langdetect
 
 # ── Text-to-Speech (Edge TTS) ──
-edge-tts==7.0.2
-
-# ── Audio Processing ──
-# ffmpeg is a system dependency (install separately, not via pip)
-# Groq Whisper handles STT — no SpeechRecognition needed
+edge-tts
 
 # ── Spotify Integration ──
-spotipy==2.25.2
-requests==2.32.5
-requests-oauthlib==2.0.0
+spotipy
+requests
+requests-oauthlib
 
 # ── Data / Utils ──
-pydantic==2.12.5
-numpy==1.23.5
-scipy==1.15.3
-scikit-learn==1.7.2
+pydantic
+numpy
+scipy
+scikit-learn
 
 # ── Async / HTTP ──
-httpx==0.28.1
-aiohttp==3.13.3
-anyio==4.12.1
+httpx
+aiohttp
+anyio
 websockets
 
 # ── Deployment ──
-gunicorn==25.1.0
+gunicorn
