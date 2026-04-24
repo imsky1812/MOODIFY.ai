@@ -58,6 +58,10 @@
 <div class="album-blur-bg"></div>
 
 <!-- SEARCH -->
+<div id="spotifyFallback" class="spotify-fallback hidden">
+    <p>Connect Spotify to play music</p>
+    <a href="/spotify-login" class="spotify-login-btn">Connect</a>
+</div>
 
 <div class="search-row">
 
@@ -171,7 +175,13 @@ value="60"
 
 <main id="chat-container">
 
-<section id="chat"></section>
+<section id="chat">
+    <div id="emptyState" class="empty-state">
+        <img src="/static/logo.png" class="empty-logo">
+        <h2>How are you feeling today?</h2>
+        <p>I'm here to listen and help you find the right music.</p>
+    </div>
+</section>
 
 <div id="controls">
 

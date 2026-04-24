@@ -363,6 +363,7 @@ window.onSpotifyWebPlaybackSDKReady = function () {
 
             if (!data.token || data.error) {
                 console.warn("Spotify not authenticated")
+                showSpotifyFallback()
                 return
             }
 
@@ -552,6 +553,13 @@ async function searchAndPlay(){
 
     const searchInput = document.getElementById("musicSearch")
     if(!searchInput) return
+
+    if(!spotifyToken) {
+        showSpotifyFallback();
+        const miniPlayer = document.getElementById("miniPlayer");
+        if(miniPlayer) miniPlayer.classList.add("active");
+        return;
+    }
 
     const query = searchInput.value.trim()
 
@@ -889,6 +897,9 @@ function addMessage(text,cls){
 
     if(!chat || !text) return
 
+    const emptyState = document.getElementById("emptyState");
+    if(emptyState) emptyState.remove();
+
     const div=document.createElement("div")
     div.className=cls
     div.innerText=text
@@ -1167,3 +1178,8 @@ window.addEventListener("load",async()=>{
     }
 
 })
+
+function showSpotifyFallback() {
+    const fallback = document.getElementById("spotifyFallback");
+    if(fallback) fallback.classList.remove("hidden");
+}
