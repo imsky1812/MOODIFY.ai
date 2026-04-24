@@ -1,9 +1,8 @@
 from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, RedirectResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 import subprocess
-import sys
 import camera_stream
 
 from spotify_service import (
@@ -36,24 +35,6 @@ from conversation_memory import (
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
-
-voice_session_active = False
-
-
-# ================= HELPERS =================
-
-def format_tracks(tracks):
-    """Convert Spotify tracks to frontend format."""
-    return [
-        {
-            "name": t["name"],
-            "artist": t["artists"][0]["name"],
-            "uri": t["uri"],
-            "image": t["album"]["images"][0]["url"],
-        }
-        for t in tracks
-    ]
-
 
 # ================= ROOT =================
 
@@ -289,9 +270,9 @@ def welcome():
 def warmup_llm():
     try:
         generate_support_message("hello", "neutral")
-        print("🔥 MOODIFY.ai LLM warmed up")
+        print("[OK] MOODIFY.ai LLM warmed up")
     except Exception:
-        print("⚠️ Warmup skipped")
+        print("[WARN] Warmup skipped")
 
 
 # ================= HEALTH =================

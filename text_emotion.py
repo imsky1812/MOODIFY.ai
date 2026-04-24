@@ -34,7 +34,7 @@ def _load_model():
 
             if _emotion_model is None:
 
-                print("🔵 Loading emotion detection model...")
+                print("[INFO] Loading emotion detection model...")
 
                 _emotion_model = pipeline(
                     task="text-classification",
@@ -43,7 +43,7 @@ def _load_model():
                     truncation=True
                 )
 
-                print("✅ Emotion model loaded")
+                print("[OK] Emotion model loaded")
 
 
 # Load model immediately when module imports

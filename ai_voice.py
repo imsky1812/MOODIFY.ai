@@ -9,15 +9,6 @@ from playsound import playsound
 
 _voice_lock = threading.Lock()
 VOICE_NAME = "en-IN-NeerjaNeural"
-
-def _init_engine():
-    """Initialize TTS engine once. edge-tts doesn't need much init."""
-    pass
-
-# Initialize on import
-_init_engine()
-
-
 # ================= SPEAK FUNCTION =================
 
 async def _save_audio(text, output_file):
@@ -53,11 +44,4 @@ def speak(text: str):
                 pass
                 
         except Exception as e:
-            print("TTS error:", e)
-
-
-# ================= OPTIONAL: STOP SPEECH =================
-
-def stop_speaking():
-    """Force stop current speech. (Not directly supported by playsound)"""
-    pass
+            print("TTS error:", e)
