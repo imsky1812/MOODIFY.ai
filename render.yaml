@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: emoticare-backend
+    name: moodify-ai
     env: docker
     region: ohio
     plan: free
