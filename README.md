@@ -24,6 +24,19 @@ The system blends **AI psychology principles with music recommendation** to crea
 
 ---
 
+# 📷 Gallery
+
+### 🌌 Lock Screen & Landing Page
+![Landing Page](docs/screenshots/landing_page.png)
+
+### 📊 Therapy Dashboard & Chat
+![Dashboard](docs/screenshots/dashboard.png)
+
+### 🎵 Connected Spotify Player Drawer
+![Player Drawer](docs/screenshots/player_drawer.png)
+
+---
+
 # ✨ Key Features
 
 ## 💬 AI Emotional Companion
