@@ -1832,3 +1832,485 @@ function showSpotifyFallback() {
     const fallback = document.getElementById("spotifyFallback");
     if(fallback) fallback.classList.remove("hidden");
 }
+
+
+/* =========================================================
+   SIDEBAR TAB SWITCHING
+=========================================================*/
+
+document.querySelectorAll(".nav-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+        const targetView = tab.dataset.tab;
+        if (!targetView) return;
+
+        // Update active nav state
+        document.querySelectorAll(".nav-tab").forEach(t => {
+            t.classList.remove("active", "bg-primary/10", "text-primary", "font-semibold");
+            t.classList.add("text-on-surface-variant", "font-medium");
+        });
+        tab.classList.add("active", "bg-primary/10", "text-primary", "font-semibold");
+        tab.classList.remove("text-on-surface-variant", "font-medium");
+
+        // Show/hide view panels
+        document.querySelectorAll(".view-panel").forEach(panel => {
+            panel.classList.add("hidden");
+        });
+        const activePanel = document.querySelector(`[data-view="${targetView}"]`);
+        if (activePanel) {
+            activePanel.classList.remove("hidden");
+        }
+
+        // Close mobile sidebar after switching
+        const sidebar = document.getElementById("sidebarNav");
+        if (sidebar && window.innerWidth < 768) {
+            sidebar.classList.add("-translate-x-full");
+        }
+
+        // Load data for the active view
+        if (targetView === "logs") loadMoodLogs();
+        if (targetView === "analytics") loadAnalytics();
+        if (targetView === "library") renderLibrary();
+        if (targetView === "community") loadCommunityPosts();
+    });
+});
+
+
+/* =========================================================
+   MOOD LOG VIEW
+=========================================================*/
+
+async function loadMoodLogs() {
+    const container = document.getElementById("logsContent");
+    if (!container) return;
+
+    try {
+        const res = await fetch("/api/logs");
+        const data = await res.json();
+        const logs = data.logs || [];
+
+        if (logs.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-16 text-on-surface-variant/60">
+                    <span class="material-symbols-outlined text-[48px] mb-3 block opacity-30">sentiment_neutral</span>
+                    <p class="text-sm">Start chatting to build your mood history.</p>
+                </div>`;
+            return;
+        }
+
+        let html = `<div class="mood-log-header"><span>Date</span><span>Message</span><span>Score</span><span>Emotion</span></div>`;
+        html += `<div class="flex flex-col gap-2">`;
+
+        logs.forEach(log => {
+            const date = log.timestamp ? new Date(log.timestamp + "Z").toLocaleDateString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "--";
+            const score = log.wellbeing_score;
+            const scoreClass = score == null ? "" : score < 45 ? "low" : score > 75 ? "high" : "mid";
+            const scoreDisplay = score != null ? `<span class="score-badge ${scoreClass}">${score}</span>` : `<span class="text-on-surface-variant/40">--</span>`;
+            const emotion = log.detected_emotion || "--";
+            const text = (log.text || "").length > 80 ? log.text.substring(0, 80) + "…" : (log.text || "--");
+
+            html += `<div class="mood-log-row">
+                <span class="text-on-surface-variant/70">${date}</span>
+                <span class="text-on-surface/90 truncate">${text}</span>
+                ${scoreDisplay}
+                <span class="text-on-surface-variant/80 capitalize">${emotion}</span>
+            </div>`;
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
+    } catch (e) {
+        console.error("Failed to load mood logs:", e);
+    }
+}
+
+
+/* =========================================================
+   ANALYTICS VIEW — Chart.js
+=========================================================*/
+
+let wellbeingChart = null;
+
+async function loadAnalytics(days = 30) {
+    try {
+        const res = await fetch(`/api/analytics?days=${days}`);
+        const data = await res.json();
+        const analytics = data.analytics || [];
+
+        const labels = analytics.map(d => {
+            const dt = new Date(d.day);
+            return dt.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+        });
+        const scores = analytics.map(d => d.avg_score);
+        const msgCounts = analytics.map(d => d.msg_count);
+
+        // Update stats
+        const avgEl = document.getElementById("statAvgScore");
+        const msgsEl = document.getElementById("statTotalMsgs");
+        const trendEl = document.getElementById("statTrend");
+
+        if (scores.length > 0) {
+            const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+            const totalMsgs = msgCounts.reduce((a, b) => a + b, 0);
+            if (avgEl) avgEl.textContent = avg;
+            if (msgsEl) msgsEl.textContent = totalMsgs;
+
+            if (scores.length >= 2) {
+                const diff = scores[scores.length - 1] - scores[0];
+                if (trendEl) {
+                    trendEl.textContent = (diff >= 0 ? "↑" : "↓") + Math.abs(Math.round(diff));
+                    trendEl.className = `text-xl font-bold ${diff >= 0 ? "text-green-400" : "text-red-400"}`;
+                }
+            }
+        } else {
+            if (avgEl) avgEl.textContent = "--";
+            if (msgsEl) msgsEl.textContent = "--";
+            if (trendEl) trendEl.textContent = "--";
+        }
+
+        // Render Chart
+        const canvas = document.getElementById("wellbeingChart");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+
+        if (wellbeingChart) {
+            wellbeingChart.destroy();
+        }
+
+        wellbeingChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Wellbeing Score",
+                    data: scores,
+                    borderColor: "rgba(255, 255, 255, 0.8)",
+                    backgroundColor: "rgba(255, 255, 255, 0.05)",
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: "#ffffff",
+                    pointBorderColor: "rgba(255,255,255,0.3)",
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: "rgba(20,20,20,0.9)",
+                        titleColor: "#fff",
+                        bodyColor: "#ccc",
+                        borderColor: "rgba(255,255,255,0.1)",
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        padding: 12,
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: "rgba(255,255,255,0.04)" },
+                        ticks: { color: "rgba(153,153,153,0.6)", font: { size: 10 } },
+                    },
+                    y: {
+                        min: 0,
+                        max: 100,
+                        grid: { color: "rgba(255,255,255,0.04)" },
+                        ticks: { color: "rgba(153,153,153,0.6)", font: { size: 10 }, stepSize: 25 },
+                    }
+                },
+                interaction: { intersect: false, mode: "index" },
+            }
+        });
+
+    } catch (e) {
+        console.error("Failed to load analytics:", e);
+    }
+}
+
+// Analytics range buttons
+document.querySelectorAll(".analytics-range-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll(".analytics-range-btn").forEach(b => {
+            b.classList.remove("active", "border-primary/40", "text-primary", "bg-primary/10");
+            b.classList.add("border-white/10", "text-on-surface-variant");
+        });
+        btn.classList.add("active", "border-primary/40", "text-primary", "bg-primary/10");
+        btn.classList.remove("border-white/10", "text-on-surface-variant");
+        loadAnalytics(parseInt(btn.dataset.days) || 30);
+    });
+});
+
+
+/* =========================================================
+   LIBRARY VIEW
+=========================================================*/
+
+const LIBRARY_CATEGORIES = [
+    { name: "Focus Acoustic", icon: "psychology", query: "focus acoustic instrumental", desc: "Enhance concentration with gentle acoustic flows" },
+    { name: "Deep Calm", icon: "self_improvement", query: "deep calm ambient instrumental", desc: "Lower stress with peaceful ambient soundscapes" },
+    { name: "Restful Ambient", icon: "bedtime", query: "sleep ambient instrumental relaxing", desc: "Drift into restful sleep with soft textures" },
+    { name: "Nature Sounds", icon: "park", query: "nature sounds rain forest instrumental", desc: "Ground yourself with natural acoustic environments" },
+    { name: "Lo-Fi Study", icon: "headphones", query: "lofi study beats instrumental", desc: "Background beats for productive study sessions" },
+    { name: "Meditation", icon: "spa", query: "meditation music tibetan bowls", desc: "Guided meditative journeys with sacred sounds" },
+    { name: "Piano Therapy", icon: "piano", query: "peaceful piano solo classical", desc: "Soothing solo piano for emotional healing" },
+    { name: "Uplifting Energy", icon: "bolt", query: "uplifting happy instrumental acoustic", desc: "Bright acoustic energy to lift your mood" },
+];
+
+function renderLibrary() {
+    const grid = document.getElementById("libraryGrid");
+    if (!grid) return;
+
+    grid.innerHTML = LIBRARY_CATEGORIES.map(cat => `
+        <div class="library-card" onclick="playLibraryCategory('${cat.query}', '${cat.name}')">
+            <div class="card-icon">
+                <span class="material-symbols-outlined text-white/70 text-[20px]">${cat.icon}</span>
+            </div>
+            <h3 class="font-display text-sm font-bold text-white mb-1">${cat.name}</h3>
+            <p class="text-[11px] text-on-surface-variant/70 leading-relaxed">${cat.desc}</p>
+        </div>
+    `).join("");
+}
+
+async function playLibraryCategory(query, categoryName) {
+    if (!spotifyToken || !deviceId) {
+        showToast("Connect Spotify first to play library tracks.");
+        return;
+    }
+
+    try {
+        const res = await fetch(`/spotify-search?query=${encodeURIComponent(query)}`);
+        const tracks = await res.json();
+        if (tracks && tracks.length > 0) {
+            isAutoPlayingWellbeing = false;
+            trackQueue = tracks;
+            currentTrackIndex = 0;
+            playTrack(trackQueue[0]);
+            showToast(`Playing: ${categoryName}`);
+
+            // Switch to chat view to see player
+            document.querySelector('[data-tab="chat"]').click();
+        } else {
+            showToast("No tracks found for this category.");
+        }
+    } catch (e) {
+        console.error("Library play error:", e);
+        showToast("Failed to search tracks.");
+    }
+}
+
+// Initialize library on first render
+renderLibrary();
+
+
+/* =========================================================
+   COMMUNITY VIEW
+=========================================================*/
+
+async function loadCommunityPosts() {
+    const container = document.getElementById("communityPosts");
+    if (!container) return;
+
+    try {
+        const res = await fetch("/api/community/posts");
+        const data = await res.json();
+        const posts = data.posts || [];
+
+        if (posts.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-16 text-on-surface-variant/60">
+                    <span class="material-symbols-outlined text-[48px] mb-3 block opacity-30">forum</span>
+                    <p class="text-sm">Be the first to share a reflection.</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = posts.map(post => {
+            const time = post.timestamp ? new Date(post.timestamp + "Z").toLocaleDateString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+            const moodEmoji = { happy: "😊", calm: "😌", sad: "😢", anxious: "😰", grateful: "🙏", hopeful: "🌟" };
+            const tagHtml = post.mood_tag ? `<span class="community-mood-tag">${moodEmoji[post.mood_tag] || ""} ${post.mood_tag}</span>` : "";
+
+            return `<div class="community-card">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-white/90">${post.alias || "Anonymous"}</span>
+                    <span class="text-[10px] text-on-surface-variant/50">${time}</span>
+                </div>
+                <p class="text-sm text-on-surface-variant/90 leading-relaxed">${post.content}</p>
+                ${tagHtml ? `<div class="mt-3">${tagHtml}</div>` : ""}
+            </div>`;
+        }).join("");
+
+        // Scroll to bottom
+        container.scrollTop = container.scrollHeight;
+    } catch (e) {
+        console.error("Failed to load community posts:", e);
+    }
+}
+
+// Community post submission
+const communityPostBtn = document.getElementById("communityPostBtn");
+const communityInput = document.getElementById("communityInput");
+const communityMoodTag = document.getElementById("communityMoodTag");
+
+if (communityPostBtn && communityInput) {
+    communityPostBtn.addEventListener("click", submitCommunityPost);
+    communityInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            submitCommunityPost();
+        }
+    });
+}
+
+async function submitCommunityPost() {
+    const content = communityInput.value.trim();
+    if (!content) return;
+
+    const moodTag = communityMoodTag ? communityMoodTag.value : "";
+
+    try {
+        const res = await fetch("/api/community/posts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content, mood_tag: moodTag || null })
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+            communityInput.value = "";
+            if (communityMoodTag) communityMoodTag.value = "";
+            showToast(`Posted anonymously as "${data.alias}"`);
+            loadCommunityPosts();
+        }
+    } catch (e) {
+        console.error("Community post failed:", e);
+        showToast("Failed to post reflection.");
+    }
+}
+
+
+/* =========================================================
+   BREATHING SESSION
+=========================================================*/
+
+const startSessionBtn = document.getElementById("startSessionBtn");
+const breathingOverlay = document.getElementById("breathingOverlay");
+const closeBreathingBtn = document.getElementById("closeBreathingBtn");
+const startBreathingBtn = document.getElementById("startBreathingBtn");
+const breathingOrb = document.getElementById("breathingOrb");
+const breathingPhase = document.getElementById("breathingPhase");
+const breathingTimer = document.getElementById("breathingTimer");
+
+let breathingInterval = null;
+let breathingActive = false;
+
+if (startSessionBtn) {
+    startSessionBtn.addEventListener("click", () => {
+        if (breathingOverlay) breathingOverlay.classList.remove("hidden");
+        resetBreathing();
+    });
+}
+
+if (closeBreathingBtn) {
+    closeBreathingBtn.addEventListener("click", () => {
+        stopBreathing();
+        if (breathingOverlay) breathingOverlay.classList.add("hidden");
+    });
+}
+
+if (startBreathingBtn) {
+    startBreathingBtn.addEventListener("click", () => {
+        if (breathingActive) return;
+        startBreathingBtn.classList.add("hidden");
+        runBreathingSession();
+    });
+}
+
+function resetBreathing() {
+    breathingActive = false;
+    if (breathingInterval) clearTimeout(breathingInterval);
+    if (breathingOrb) breathingOrb.className = "breathing-orb";
+    if (breathingPhase) breathingPhase.textContent = "Get Ready";
+    if (breathingTimer) breathingTimer.textContent = "Press start to begin";
+    if (startBreathingBtn) startBreathingBtn.classList.remove("hidden");
+}
+
+function stopBreathing() {
+    breathingActive = false;
+    if (breathingInterval) clearTimeout(breathingInterval);
+    resetBreathing();
+}
+
+async function runBreathingSession() {
+    breathingActive = true;
+    const totalCycles = 3;
+    const phaseDuration = 4000; // 4 seconds per phase
+    let currentCycle = 0;
+
+    // Record wellbeing before
+    const scoreBefore = parseInt(document.getElementById("wellbeingScore")?.textContent) || null;
+    const startTime = Date.now();
+
+    function runCycle() {
+        if (!breathingActive || currentCycle >= totalCycles) {
+            // Session complete
+            breathingActive = false;
+            if (breathingOrb) breathingOrb.className = "breathing-orb";
+            if (breathingPhase) breathingPhase.textContent = "Session Complete ✓";
+            if (breathingTimer) breathingTimer.textContent = "Great job! Take a moment.";
+
+            // Log session
+            const duration = Math.round((Date.now() - startTime) / 1000);
+            const scoreAfter = parseInt(document.getElementById("wellbeingScore")?.textContent) || null;
+            fetch("/api/sessions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    session_type: "Breathing",
+                    duration_seconds: duration,
+                    wellbeing_before: scoreBefore,
+                    wellbeing_after: scoreAfter,
+                })
+            }).catch(e => console.error("Session log failed:", e));
+
+            showToast("Breathing session completed. Session logged.");
+
+            setTimeout(() => {
+                if (breathingOverlay) breathingOverlay.classList.add("hidden");
+                resetBreathing();
+            }, 3000);
+            return;
+        }
+
+        currentCycle++;
+
+        // Phase 1: Inhale
+        if (breathingOrb) breathingOrb.className = "breathing-orb inhale";
+        if (breathingPhase) breathingPhase.textContent = "Breathe In";
+        if (breathingTimer) breathingTimer.textContent = `Cycle ${currentCycle}/${totalCycles}`;
+
+        breathingInterval = setTimeout(() => {
+            // Phase 2: Hold
+            if (!breathingActive) return;
+            if (breathingOrb) breathingOrb.className = "breathing-orb hold";
+            if (breathingPhase) breathingPhase.textContent = "Hold";
+
+            breathingInterval = setTimeout(() => {
+                // Phase 3: Exhale
+                if (!breathingActive) return;
+                if (breathingOrb) breathingOrb.className = "breathing-orb exhale";
+                if (breathingPhase) breathingPhase.textContent = "Breathe Out";
+
+                breathingInterval = setTimeout(() => {
+                    if (!breathingActive) return;
+                    runCycle();
+                }, phaseDuration);
+
+            }, phaseDuration);
+
+        }, phaseDuration);
+    }
+
+    runCycle();
+}

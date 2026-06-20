@@ -9,9 +9,6 @@ from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 from datetime import datetime
 import requests
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import subprocess
 import camera_stream
 
@@ -41,6 +38,18 @@ from conversation_memory import (
     message_count,
     set_score,
     get_score,
+)
+
+from database import (
+    init_db,
+    upsert_user,
+    get_chat_history as db_get_chat_history,
+    get_mood_logs,
+    get_analytics_data,
+    log_session,
+    get_user_sessions,
+    create_community_post,
+    get_community_posts,
 )
 
 import os
@@ -166,6 +175,11 @@ def auth_google(data: GoogleLoginInput, request: Request):
     request.session["user"] = user_info
     client_ip = request.client.host
     log_user_login(user_info["email"], user_info["name"], client_ip)
+    # Upsert user in SQLite database
+    try:
+        upsert_user(user_info["email"], user_info["name"], user_info.get("picture", ""))
+    except Exception as e:
+        print(f"[DB Warning] Failed to upsert user: {e}")
     return {"status": "success", "user": user_info}
 
 @app.post("/api/auth/logout")
@@ -191,6 +205,7 @@ class TextInput(BaseModel):
 def analyze_text(data: TextInput, user: dict = Depends(require_auth)):
 
     user_text = data.text.strip()
+    user_email = user.get("email")
 
     if not user_text:
         return {
@@ -199,17 +214,17 @@ def analyze_text(data: TextInput, user: dict = Depends(require_auth)):
             "risk_level": "LOW",
         }
 
-    # Store user message
-    add_user_message(user_text)
+    # Store user message (persisted to DB)
+    add_user_message(user_text, user_email=user_email)
 
     # Call unified agent
-    history = get_history()
+    history = get_history(user_email=user_email)
     # history includes current user message, so pass history[:-1] as prior turns
     response = generate_agent_response(user_text, history[:-1])
 
-    # Store assistant's message in memory
+    # Store assistant's message in memory (persisted to DB)
     reply = response.get("reply", "")
-    add_assistant_message(reply)
+    add_assistant_message(reply, user_email=user_email)
 
     # Wellbeing calculation & smoothing
     score = response.get("wellbeing_score")
@@ -327,18 +342,19 @@ async def analyze_audio(audio: UploadFile = File(...), user: dict = Depends(requ
         from voice_emotion import speech_to_text
         text = speech_to_text(wav_path)
         
+        user_email = user.get("email")
         command = None
         music_query = None
         if text:
-            # Store user message
-            add_user_message(text)
+            # Store user message (persisted to DB)
+            add_user_message(text, user_email=user_email)
             
             # Call unified agent
-            history = get_history()
+            history = get_history(user_email=user_email)
             response = generate_agent_response(text, history[:-1])
             
             reply = response.get("reply", "")
-            add_assistant_message(reply)
+            add_assistant_message(reply, user_email=user_email)
             
             command = response.get("command", "none")
             music_query = response.get("music_query", None)
@@ -421,7 +437,13 @@ def welcome(user: dict = Depends(require_auth)):
 # ================= STARTUP =================
 
 @app.on_event("startup")
-def warmup_llm():
+def startup_event():
+    # Initialize SQLite database tables
+    try:
+        init_db()
+    except Exception as e:
+        print(f"[DB Error] Failed to initialize database: {e}")
+    # Warm up LLM
     try:
         generate_support_message("hello", "neutral")
         print("[OK] MOODIFY.ai LLM warmed up")
@@ -491,6 +513,111 @@ def spotify_search(query: str, user: dict = Depends(require_auth)):
         }
         for t in tracks
     ]
+
+
+# ================= PERSISTENT DATA API =================
+
+class SessionInput(BaseModel):
+    session_type: str
+    duration_seconds: int
+    wellbeing_before: int = None
+    wellbeing_after: int = None
+
+class CommunityPostInput(BaseModel):
+    content: str
+    mood_tag: str = None
+
+
+@app.get("/api/history")
+def api_history(user: dict = Depends(require_auth)):
+    """Retrieve full chat history for the logged-in user."""
+    email = user.get("email")
+    try:
+        rows = db_get_chat_history(email, limit=200)
+        return {"history": rows}
+    except Exception as e:
+        print(f"[API Error] /api/history: {e}")
+        return {"history": []}
+
+
+@app.get("/api/analytics")
+def api_analytics(days: int = 30, user: dict = Depends(require_auth)):
+    """Return aggregated wellbeing scores by day for chart rendering."""
+    email = user.get("email")
+    try:
+        data = get_analytics_data(email, days=days)
+        return {"analytics": data}
+    except Exception as e:
+        print(f"[API Error] /api/analytics: {e}")
+        return {"analytics": []}
+
+
+@app.get("/api/logs")
+def api_logs(user: dict = Depends(require_auth)):
+    """Return detailed mood logs for the Mood Log view."""
+    email = user.get("email")
+    try:
+        logs = get_mood_logs(email, limit=100)
+        return {"logs": logs}
+    except Exception as e:
+        print(f"[API Error] /api/logs: {e}")
+        return {"logs": []}
+
+
+@app.get("/api/sessions")
+def api_get_sessions(user: dict = Depends(require_auth)):
+    """Retrieve past meditation sessions."""
+    email = user.get("email")
+    try:
+        sessions = get_user_sessions(email)
+        return {"sessions": sessions}
+    except Exception as e:
+        print(f"[API Error] GET /api/sessions: {e}")
+        return {"sessions": []}
+
+
+@app.post("/api/sessions")
+def api_log_session(data: SessionInput, user: dict = Depends(require_auth)):
+    """Record a completed meditation/breathing session."""
+    email = user.get("email")
+    try:
+        log_session(
+            user_email=email,
+            session_type=data.session_type,
+            duration_seconds=data.duration_seconds,
+            wellbeing_before=data.wellbeing_before,
+            wellbeing_after=data.wellbeing_after,
+        )
+        return {"status": "success"}
+    except Exception as e:
+        print(f"[API Error] POST /api/sessions: {e}")
+        raise HTTPException(status_code=500, detail="Failed to log session")
+
+
+@app.get("/api/community/posts")
+def api_get_community_posts():
+    """Retrieve anonymous community wellness posts (public endpoint)."""
+    try:
+        posts = get_community_posts(limit=50)
+        return {"posts": posts}
+    except Exception as e:
+        print(f"[API Error] GET /api/community/posts: {e}")
+        return {"posts": []}
+
+
+@app.post("/api/community/posts")
+def api_create_community_post(data: CommunityPostInput, user: dict = Depends(require_auth)):
+    """Create a new anonymous community wellness post."""
+    email = user.get("email")
+    content = data.content.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Post content cannot be empty")
+    try:
+        alias = create_community_post(email, content, data.mood_tag)
+        return {"status": "success", "alias": alias}
+    except Exception as e:
+        print(f"[API Error] POST /api/community/posts: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create post")
 
 
 # ================= RECOMMEND =================

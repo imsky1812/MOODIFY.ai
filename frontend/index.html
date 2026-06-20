@@ -93,7 +93,10 @@
     </script>
 
     <!-- CUSTOM STYLES EXTENSION -->
-    <link rel="stylesheet" href="/static/moodify.css?v=3">
+    <link rel="stylesheet" href="/static/moodify.css?v=4">
+
+    <!-- CHART.JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
     <!-- SPOTIFY SDK -->
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
@@ -349,30 +352,23 @@
 
         <!-- Navigation Menu Links -->
         <div class="flex flex-col gap-1 px-1">
-            <!-- Active Link -->
-            <a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary font-body text-sm font-semibold transition-all duration-200"
-                href="#">
+            <a data-tab="chat" class="nav-tab active flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary font-body text-sm font-semibold transition-all duration-200 cursor-pointer">
                 <span class="material-symbols-outlined text-[20px]">chat</span>
                 Companion Chat
             </a>
-            <!-- Inactive Links with Toast Trigger -->
-            <a onclick="showToast('Mood Log analytics coming soon!')"
-                class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
+            <a data-tab="logs" class="nav-tab flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
                 <span class="material-symbols-outlined text-[20px]">mood</span>
                 Mood Log
             </a>
-            <a onclick="showToast('Wellbeing analytics coming soon!')"
-                class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
+            <a data-tab="analytics" class="nav-tab flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
                 <span class="material-symbols-outlined text-[20px]">insights</span>
                 Analytics
             </a>
-            <a onclick="showToast('Music library browsing coming soon!')"
-                class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
+            <a data-tab="library" class="nav-tab flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
                 <span class="material-symbols-outlined text-[20px]">auto_stories</span>
                 Library
             </a>
-            <a onclick="showToast('Student community hub coming soon!')"
-                class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
+            <a data-tab="community" class="nav-tab flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
                 <span class="material-symbols-outlined text-[20px]">group</span>
                 Community
             </a>
@@ -380,7 +376,7 @@
 
         <!-- Start Session CTA -->
         <div class="mt-auto mb-6 px-2">
-            <button onclick="showToast('Dynamic meditation sessions coming soon!')"
+            <button id="startSessionBtn"
                 class="w-full py-3 px-4 bg-primary text-on-primary rounded-full font-label font-bold text-sm hover:opacity-95 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/10">
                 <span class="material-symbols-outlined text-[18px]"
                     style="font-variation-settings: 'FILL' 1;">play_arrow</span>
@@ -446,9 +442,8 @@
         <!-- Content Split Area -->
         <div class="flex-1 flex overflow-hidden md:p-6 p-4 md:gap-6 gap-4 relative">
 
-            <!-- CENTER: AI Chat Column -->
-            <section id="chat-container"
-                class="flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
+            <!-- ====== VIEW: CHAT (default) ====== -->
+            <section id="chatView" data-view="chat" class="view-panel flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
                 <!-- Chat Logs messages -->
                 <div id="chat" class="flex-1 overflow-y-auto p-6 flex flex-col gap-6 custom-scrollbar">
                     <!-- Empty Landing State -->
@@ -464,27 +459,118 @@
                 <div class="p-4 border-t border-white/5 bg-surface-dim/40 backdrop-blur-md">
                     <div id="controls"
                         class="flex items-center gap-3 px-4 py-2 bg-surface-container-lowest/80 rounded-full border border-white/5 focus-within:border-primary/30 transition-all shadow-inner">
-                        <!-- Toggle Camera -->
                         <button
                             class="iconBtn p-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-variant/40 transition-colors flex items-center justify-center"
                             id="cameraBtn" title="Toggle Live Emotion Detection">
                             <span class="material-symbols-outlined text-[22px]">photo_camera</span>
                         </button>
-                        <!-- Toggle Microphone Voice Assistant -->
                         <button
                             class="iconBtn p-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-variant/40 transition-colors flex items-center justify-center"
                             id="voiceBtn" title="Toggle Voice Assistant">
                             <span class="material-symbols-outlined text-[22px]">mic</span>
                         </button>
-                        <!-- Text field input -->
                         <input id="userInput"
                             class="flex-1 bg-transparent border-none focus:ring-0 text-sm text-on-surface placeholder-on-surface-variant/50 font-body outline-none px-2 h-10"
                             placeholder="Share how you're feeling..." type="text" autocomplete="off" />
-                        <!-- Send message button -->
                         <button id="sendBtn"
                             class="w-10 h-10 rounded-full bg-primary text-on-primary hover:bg-primary-container transition-all flex items-center justify-center shadow-md shadow-primary/20">
                             <span class="material-symbols-outlined text-[20px]"
                                 style="font-variation-settings: 'FILL' 1;">send</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ====== VIEW: MOOD LOG ====== -->
+            <section id="logsView" data-view="logs" class="view-panel hidden flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
+                <div class="p-6 border-b border-white/5 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-[22px]">mood</span>
+                    <h2 class="font-display text-lg font-bold text-white tracking-tight">Mood Log</h2>
+                </div>
+                <div id="logsContent" class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                    <div class="logs-empty text-center py-16 text-on-surface-variant/60">
+                        <span class="material-symbols-outlined text-[48px] mb-3 block opacity-30">sentiment_neutral</span>
+                        <p class="text-sm">Start chatting to build your mood history.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ====== VIEW: ANALYTICS ====== -->
+            <section id="analyticsView" data-view="analytics" class="view-panel hidden flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
+                <div class="p-6 border-b border-white/5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary text-[22px]">insights</span>
+                        <h2 class="font-display text-lg font-bold text-white tracking-tight">Wellbeing Analytics</h2>
+                    </div>
+                    <div class="flex gap-2">
+                        <button data-days="7" class="analytics-range-btn px-3 py-1 text-[10px] font-bold rounded-full border border-white/10 text-on-surface-variant hover:bg-white/10 transition-all">7D</button>
+                        <button data-days="14" class="analytics-range-btn px-3 py-1 text-[10px] font-bold rounded-full border border-white/10 text-on-surface-variant hover:bg-white/10 transition-all">14D</button>
+                        <button data-days="30" class="analytics-range-btn active px-3 py-1 text-[10px] font-bold rounded-full border border-primary/40 text-primary bg-primary/10 transition-all">30D</button>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-y-auto p-6 custom-scrollbar flex flex-col gap-6">
+                    <!-- Chart Container -->
+                    <div class="glass-panel rounded-xl p-5 border border-white/5" style="min-height:280px">
+                        <canvas id="wellbeingChart"></canvas>
+                    </div>
+                    <!-- Stats Summary -->
+                    <div id="analyticsStats" class="grid grid-cols-3 gap-3">
+                        <div class="glass-panel rounded-xl p-4 text-center border border-white/5">
+                            <span class="block text-[9px] uppercase tracking-wider text-on-surface-variant font-label mb-1">Avg Score</span>
+                            <span id="statAvgScore" class="text-xl font-bold text-primary">--</span>
+                        </div>
+                        <div class="glass-panel rounded-xl p-4 text-center border border-white/5">
+                            <span class="block text-[9px] uppercase tracking-wider text-on-surface-variant font-label mb-1">Messages</span>
+                            <span id="statTotalMsgs" class="text-xl font-bold text-white">--</span>
+                        </div>
+                        <div class="glass-panel rounded-xl p-4 text-center border border-white/5">
+                            <span class="block text-[9px] uppercase tracking-wider text-on-surface-variant font-label mb-1">Trend</span>
+                            <span id="statTrend" class="text-xl font-bold text-green-400">--</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ====== VIEW: LIBRARY ====== -->
+            <section id="libraryView" data-view="library" class="view-panel hidden flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
+                <div class="p-6 border-b border-white/5 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-[22px]">auto_stories</span>
+                    <h2 class="font-display text-lg font-bold text-white tracking-tight">Therapy Library</h2>
+                </div>
+                <div id="libraryContent" class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="libraryGrid">
+                        <!-- Library categories rendered by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ====== VIEW: COMMUNITY ====== -->
+            <section id="communityView" data-view="community" class="view-panel hidden flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
+                <div class="p-6 border-b border-white/5 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-[22px]">group</span>
+                    <h2 class="font-display text-lg font-bold text-white tracking-tight">Wellness Community</h2>
+                </div>
+                <div id="communityPosts" class="flex-1 overflow-y-auto p-6 custom-scrollbar flex flex-col gap-4">
+                    <!-- Posts rendered by JS -->
+                </div>
+                <!-- Community Post Input -->
+                <div class="p-4 border-t border-white/5 bg-surface-dim/40 backdrop-blur-md">
+                    <div class="flex items-center gap-3">
+                        <select id="communityMoodTag" class="bg-surface-container-lowest border border-white/5 rounded-full px-3 py-2 text-xs text-on-surface-variant outline-none focus:border-primary/30 transition-colors">
+                            <option value="">Mood tag</option>
+                            <option value="happy">😊 Happy</option>
+                            <option value="calm">😌 Calm</option>
+                            <option value="sad">😢 Sad</option>
+                            <option value="anxious">😰 Anxious</option>
+                            <option value="grateful">🙏 Grateful</option>
+                            <option value="hopeful">🌟 Hopeful</option>
+                        </select>
+                        <input id="communityInput"
+                            class="flex-1 bg-surface-container-lowest border border-white/5 rounded-full px-4 py-2 text-sm text-on-surface placeholder-on-surface-variant/50 outline-none focus:border-primary/30 transition-colors"
+                            placeholder="Share an anonymous reflection..." type="text" autocomplete="off" />
+                        <button id="communityPostBtn"
+                            class="w-10 h-10 rounded-full bg-primary text-on-primary hover:bg-primary-container transition-all flex items-center justify-center shadow-md shadow-primary/20">
+                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">send</span>
                         </button>
                     </div>
                 </div>
@@ -680,6 +766,24 @@
             <button onclick="closeEmergency()"
                 class="px-6 py-2.5 bg-red-500 text-white text-xs font-bold rounded-full hover:bg-red-600 transition-colors shadow-md shadow-red-500/10">I
                 understand</button>
+        </div>
+    </div>
+
+    <!-- ================= BREATHING SESSION OVERLAY ================= -->
+    <div id="breathingOverlay" class="breathing-overlay hidden">
+        <div class="breathing-box">
+            <button id="closeBreathingBtn" class="absolute top-5 right-5 w-8 h-8 rounded-full border border-white/10 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white transition-all cursor-pointer z-10">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <div class="breathing-orb-container">
+                <div id="breathingOrb" class="breathing-orb"></div>
+            </div>
+            <div id="breathingPhase" class="text-white font-display text-2xl font-bold tracking-wide mt-8 select-none">Get Ready</div>
+            <div id="breathingTimer" class="text-on-surface-variant text-sm font-label mt-2 select-none">Press start to begin</div>
+            <div class="flex gap-4 mt-8">
+                <button id="startBreathingBtn" class="px-8 py-3 bg-primary text-on-primary font-semibold text-xs rounded-full hover:bg-primary-fixed-dim transition-all shadow-md shadow-primary/20">Start Breathing</button>
+            </div>
+            <div id="breathingCycles" class="text-[10px] text-on-surface-variant/60 mt-4 select-none">3 cycles · 36 seconds</div>
         </div>
     </div>
 
