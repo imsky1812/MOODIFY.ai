@@ -198,18 +198,18 @@ MOODIFY.ai
 │   ├── script.js
 │   └── assets
 │
-├── main.py
-├── spotify_service.py
-├── llm_response.py
-├── conversation_memory.py
-├── text_emotion.py
-├── mental_state.py
-│
-├── voice_assistant.py
-├── voice_emotion.py
-├── ai_voice.py
-│
-├── live_face_emotion.py
+├── backend
+│   ├── main.py
+│   ├── spotify_service.py
+│   ├── llm_response.py
+│   ├── conversation_memory.py
+│   ├── text_emotion.py
+│   ├── mental_state.py
+│   ├── voice_assistant.py
+│   ├── voice_emotion.py
+│   ├── ai_voice.py
+│   ├── camera_stream.py
+│   └── live_face_emotion.py
 │
 ├── requirements.txt
 └── README.md
@@ -260,7 +260,7 @@ SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/callback
 Start the FastAPI server:
 
 ```
-uvicorn main:app --reload
+uvicorn backend.main:app --reload
 ```
 
 Open in browser:

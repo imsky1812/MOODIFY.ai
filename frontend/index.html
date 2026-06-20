@@ -1,312 +1,712 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
+
 <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta name="description" content="MOODIFY.ai - Premium AI Emotional Wellbeing Companion with Music Therapy" />
+    <title>MOODIFY.ai - Dashboard</title>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- FAVICONS -->
+    <link rel="icon" href="/static/favicon.ico">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 
-<meta name="description" content="MOODIFY.ai - AI-powered emotional wellbeing assistant for students.">
+    <!-- TAILWIND & FONTS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;family=Public+Sans:wght@400;500;600&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
 
-<title>MOODIFY.ai</title>
+    <!-- TAILWIND CONFIG -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container": "#141414",
+                        "on-error": "#690005",
+                        "on-tertiary": "#3a3a3a",
+                        "outline-variant": "#333333",
+                        "on-surface-variant": "#999999",
+                        "surface-bright": "#2a2a2a",
+                        "surface-dim": "#050505",
+                        "surface-container-high": "#1e1e1e",
+                        "surface": "#0a0a0a",
+                        "on-secondary-container": "#d0d0d0",
+                        "on-secondary-fixed": "#1a1a1a",
+                        "surface-tint": "#ffffff",
+                        "secondary": "#b0b0b0",
+                        "background": "#0a0a0a",
+                        "primary-fixed": "#e0e0e0",
+                        "on-primary-fixed-variant": "#222222",
+                        "surface-container-lowest": "#060606",
+                        "on-secondary": "#1a1a1a",
+                        "secondary-container": "#2a2a2a",
+                        "on-error-container": "#ffdad6",
+                        "inverse-primary": "#222222",
+                        "surface-variant": "#1e1e1e",
+                        "on-surface": "#e8e8e8",
+                        "on-tertiary-container": "#555555",
+                        "tertiary-container": "#3a3a3a",
+                        "surface-container-highest": "#282828",
+                        "surface-container-low": "#111111",
+                        "on-tertiary-fixed": "#1a1a1a",
+                        "primary-fixed-dim": "#cccccc",
+                        "tertiary": "#888888",
+                        "error": "#ff6b6b",
+                        "tertiary-fixed": "#c0c0c0",
+                        "on-primary-fixed": "#0a0a0a",
+                        "secondary-fixed": "#d0d0d0",
+                        "error-container": "#93000a",
+                        "on-background": "#e8e8e8",
+                        "primary": "#ffffff",
+                        "on-primary": "#0a0a0a",
+                        "on-secondary-fixed-variant": "#333333",
+                        "outline": "#555555",
+                        "inverse-surface": "#e8e8e8",
+                        "inverse-on-surface": "#1a1a1a",
+                        "secondary-fixed-dim": "#b0b0b0",
+                        "primary-container": "#e0e0e0",
+                        "on-primary-container": "#1a1a1a",
+                        "tertiary-fixed-dim": "#888888",
+                        "on-tertiary-fixed-variant": "#444444"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Sora"],
+                        "display": ["Sora"],
+                        "body": ["Inter"],
+                        "label": ["Public Sans"]
+                    }
+                }
+            }
+        }
+    </script>
 
-<!-- FAVICONS -->
-<link rel="icon" href="/static/favicon.ico">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+    <!-- CUSTOM STYLES EXTENSION -->
+    <link rel="stylesheet" href="/static/moodify.css?v=3">
 
-<!-- FONTS -->
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SPOTIFY SDK -->
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
 
-<!-- CSS -->
-<link rel="stylesheet" href="/static/style.css">
-<link rel="stylesheet" href="/static/voice.css">
-
-<!-- SPOTIFY WEB PLAYBACK SDK -->
-<script src="https://sdk.scdn.co/spotify-player.js"></script>
-
+    <!-- GOOGLE IDENTITY SERVICES (OAUTH) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
-<body>
+<body class="bg-background text-on-background font-body min-h-screen relative overflow-hidden flex">
 
-<div class="cursor-glow"></div>
+    <!-- WebGL Background Shader Backdrop -->
+    <div class="absolute inset-0 w-full h-full z-0 opacity-55 pointer-events-none" style="display:block;">
+        <canvas id="shader-canvas-ANIMATION_2" style="display:block;width:100%;height:100%"></canvas>
+        <script>
+                (function () {
+                    const canvas = document.getElementById('shader-canvas-ANIMATION_2');
+                    function syncSize() {
+                        const w = window.innerWidth || 1280;
+                        const h = window.innerHeight || 720;
+                        if (canvas.width !== w || canvas.height !== h) {
+                            canvas.width = w;
+                            canvas.height = h;
+                        }
+                    }
+                    window.addEventListener('resize', syncSize);
+                    syncSize();
 
-<!-- ================= HEADER ================= -->
+                    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                    if (!gl) return;
+                    const vs = `attribute vec2 a_position;
+    varying vec2 v_texCoord;
+    void main() {
+      v_texCoord = a_position * 0.5 + 0.5;
+      gl_Position = vec4(a_position, 0.0, 1.0);
+    }`;
+                    const fs = `precision highp float;
+    uniform float u_time;
+    uniform vec2 u_resolution;
+    varying vec2 v_texCoord;
+    void main() {
+        vec2 uv = v_texCoord;
+        vec3 color1 = vec3(0.05, 0.05, 0.06);
+        vec3 color2 = vec3(0.20, 0.20, 0.22);
+        float noise = sin(uv.x * 2.0 + u_time * 0.15) * cos(uv.y * 2.0 - u_time * 0.2);
+        noise += sin(uv.x * 3.5 - u_time * 0.08) * cos(uv.y * 2.5 + u_time * 0.15);
+        noise += sin(uv.x * 5.0 + u_time * 0.05) * 0.3;
+        vec3 finalColor = mix(color1, color2, noise * 0.5 + 0.5);
+        gl_FragColor = vec4(finalColor, 1.0);
+    }`;
+                    function cs(type, src) {
+                        const s = gl.createShader(type);
+                        gl.shaderSource(s, src);
+                        gl.compileShader(s);
+                        return s;
+                    }
+                    const prog = gl.createProgram();
+                    gl.attachShader(prog, cs(gl.VERTEX_SHADER, vs));
+                    gl.attachShader(prog, cs(gl.FRAGMENT_SHADER, fs));
+                    gl.linkProgram(prog);
+                    gl.useProgram(prog);
+                    const buf = gl.createBuffer();
+                    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+                    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+                    const pos = gl.getAttribLocation(prog, 'a_position');
+                    gl.enableVertexAttribArray(pos);
+                    gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+                    const uTime = gl.getUniformLocation(prog, 'u_time');
+                    const uRes = gl.getUniformLocation(prog, 'u_resolution');
 
-<header class="topbar">
-
-<div class="header-left">
-
-<div class="brand" id="refreshApp">
-
-<img src="/static/logo.png" class="logo" alt="Moodify logo">
-
-<h1 class="app-title">MOODIFY.ai</h1>
-
-</div>
-
-</div>
-
-<!-- ================= SPOTIFY PLAYER ================= -->
-
-<div class="spotify-wrapper">
-
-<div id="spotifyIcon">
-<img src="/static/spotify.svg" alt="Spotify">
-</div>
-
-<div id="miniPlayer">
-
-<div class="album-blur-bg"></div>
-
-<!-- SEARCH -->
-<div id="spotifyFallback" class="spotify-fallback hidden">
-    <p>Connect Spotify to play music</p>
-    <a href="/spotify-login" class="spotify-login-btn">Connect</a>
-</div>
-
-<div class="search-row">
-
-    <input 
-        type="text"
-        id="musicSearch"
-        placeholder="Search song or artist..."
-    />
-
-    <button id="searchPlayBtn" title="Search &amp; Play">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-    </button>
-
-</div>
-
-<!-- ALBUM -->
-
-<div class="album-section">
-
-<img
-id="trackImage"
-src="https://i1.sndcdn.com/artworks-uAn8HpTmcjKSAoP6-AzBtOg-t1080x1080.jpg"
-alt="Album cover"
-/>
-
-</div>
-
-<!-- CONTROLS -->
-
-<div class="controls-section">
-
-<button id="prevBtn" class="player-btn">⏮</button>
-
-<button id="playPauseBtn" class="player-btn play-btn">▶</button>
-
-<button id="nextBtn" class="player-btn">⏭</button>
-
-</div>
-
-<!-- TRACK INFO -->
-
-<div class="track-info">
-
-<div id="trackTitle" class="track-title">
-No song playing
-</div>
-
-<div id="trackArtist" class="track-artist">
-Moodify Player
-</div>
-
-</div>
-
-<!-- PROGRESS -->
-
-<div class="progress-container">
-
-<span id="currentTime" class="time-label">0:00</span>
-
-<input
-type="range"
-id="songSlider"
-min="0"
-max="100"
-value="0"
-/>
-
-<span id="totalTime" class="time-label">0:00</span>
-
-</div>
-
-<!-- VOLUME -->
-
-<div class="volume-container">
-
-<span class="volume-icon">🔊</span>
-
-<input
-type="range"
-id="volumeSlider"
-min="0"
-max="100"
-value="60"
-/>
-
-</div>
-
-</div>
-
-</div>
-
-<!-- ================= WELLBEING ================= -->
-
-<div class="header-right">
-
-<div class="wellbeing-box">
-
-<span class="wellbeing-pulse">💚</span> Wellbeing:
-<span id="wellbeingScore">--</span>
-
-</div>
-
-</div>
-
-</header>
-
-<!-- ================= CHAT ================= -->
-
-<main id="chat-container">
-
-<section id="chat">
-    <div id="emptyState" class="empty-state">
-        <img src="/static/logo.png" class="empty-logo">
-        <h2>How are you feeling today?</h2>
-        <p>I'm here to listen and help you find the right music.</p>
+                    function render(t) {
+                        gl.viewport(0, 0, canvas.width, canvas.height);
+                        if (uTime) gl.uniform1f(uTime, t * 0.001);
+                        if (uRes) gl.uniform2f(uRes, canvas.width, canvas.height);
+                        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                        requestAnimationFrame(render);
+                    }
+                    render(0);
+                })();
+        </script>
     </div>
-</section>
 
-<div id="controls">
+    <!-- White Ash / Mist Cursor Particle Canvas -->
+    <canvas id="ashCanvas" class="fixed inset-0 w-full h-full pointer-events-none" style="z-index:100;"></canvas>
 
-<button class="iconBtn" id="cameraBtn" title="Toggle Camera">
-<img src="/static/camera.svg">
-</button>
+    <!-- Custom White Ball Cursor Dot with mix-blend-difference color inversion -->
+    <div id="customCursorDot" class="fixed w-2.5 h-2.5 rounded-full pointer-events-none select-none z-[1000000] bg-white -translate-x-1/2 -translate-y-1/2 hidden md:block" style="left: -100px; top: -100px; mix-blend-mode: difference; opacity: 0.85;"></div>
 
-<button class="iconBtn" id="voiceBtn">
-<img src="/static/mic.svg">
-</button>
+    <!-- About Sliding Panel -->
+    <div id="aboutPanel" class="fixed right-0 top-0 bottom-0 w-full sm:w-[480px] bg-background/80 backdrop-blur-2xl border-l border-white/10 z-[100] translate-x-full transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) flex flex-col shadow-2xl m-0 rounded-l-3xl overflow-hidden">
+        <!-- Panel Header -->
+        <div class="h-20 flex items-center justify-between px-8 border-b border-white/5 bg-surface-container/40">
+            <h3 class="font-display text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary/80">info</span>
+                About MOODIFY.ai
+            </h3>
+            <button id="closeAboutBtn" class="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white transition-all cursor-pointer" title="Close About Section">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>
+        <!-- Panel Body -->
+        <div class="flex-1 overflow-y-auto p-8 flex flex-col gap-6 custom-scrollbar text-sm text-on-surface-variant/90 leading-relaxed bg-surface/30">
+            <!-- Section: What is it -->
+            <div class="flex flex-col gap-3">
+                <h4 class="font-display text-sm font-semibold text-white tracking-wide uppercase text-primary/90 flex items-center gap-1.5">
+                    What is MOODIFY.ai?
+                </h4>
+                <p>
+                    MOODIFY.ai is a premium emotional wellbeing companion designed to act as your acoustic sanctuary. It leverages advanced facial expressions, voice acoustics, and sentiment reasoning to gauge your current state of mind and dynamically calibrate acoustic therapy using Spotify's library.
+                </p>
+            </div>
+            
+            <hr class="border-white/5" />
 
-<input
-id="userInput"
-type="text"
-placeholder="Share how you're feeling..."
-autocomplete="off"
-/>
+            <!-- Section: How to use -->
+            <div class="flex flex-col gap-3">
+                <h4 class="font-display text-sm font-semibold text-white tracking-wide uppercase text-primary/90">
+                    How to use it
+                </h4>
+                <ul class="list-disc list-inside flex flex-col gap-2">
+                    <li><strong class="text-white/90">Authenticate:</strong> Sign in with Google to establish your private wellbeing profile.</li>
+                    <li><strong class="text-white/90">Calibrate:</strong> Enable your camera or microphone, or simply chat to describe your day.</li>
+                    <li><strong class="text-white/90">Acoustic Therapy:</strong> Tap companion triggers to generate dynamic Spotify play recommendations matched to your state.</li>
+                </ul>
+            </div>
 
-<button id="sendBtn">
-<img src="/static/send.svg" id="sendIcon">
-</button>
+            <hr class="border-white/5" />
 
-</div>
+            <!-- Section: Mental Health & Music -->
+            <div class="flex flex-col gap-3">
+                <h4 class="font-display text-sm font-semibold text-white tracking-wide uppercase text-primary/90">
+                    Mental Health & Music Healing
+                </h4>
+                <p>
+                    Music has a direct neurobiological impact on mental health. Sound waves stimulate the autonomic nervous system, regulating cortisol (stress hormone) levels and increasing dopamine production.
+                </p>
+                <div class="flex flex-col gap-2 bg-white/5 border border-white/5 rounded-xl p-4 mt-1">
+                    <div class="flex items-start gap-2.5">
+                        <span class="material-symbols-outlined text-[16px] text-white/80 mt-0.5">favorite</span>
+                        <div>
+                            <strong class="text-white/90 block text-xs">Heart Rate Entrainment</strong>
+                            <span class="text-xs text-on-surface-variant/75">Slow tempo tracks shift brainwave activity from Beta to Alpha/Theta states, reducing heart rate and blood pressure.</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-2 bg-white/5 border border-white/5 rounded-xl p-4">
+                    <div class="flex items-start gap-2.5">
+                        <span class="material-symbols-outlined text-[16px] text-white/80 mt-0.5">psychology</span>
+                        <div>
+                            <strong class="text-white/90 block text-xs">Acoustic Calibration</strong>
+                            <span class="text-xs text-on-surface-variant/75">By matching your current mood resonance and gradually moving the acoustic structure toward stability, audio acts as a therapeutic anchor.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-</main>
+    <!-- ================= LANDING PAGE LOCK SCREEN ================= -->
+    <div id="landingPage" class="fixed inset-0 z-50 flex flex-col bg-background/90 backdrop-blur-2xl transition-all duration-[900ms] cubic-bezier(0.16, 1, 0.3, 1) overflow-hidden border border-white/5 m-4 rounded-3xl shadow-2xl">
+        <!-- Background organic lines mimicking the reference UI -->
+        <div class="absolute inset-0 z-0 pointer-events-none opacity-40">
+            <svg class="w-full h-full stroke-white/5 stroke-[0.5] fill-none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 0,250 C 150,250 250,150 450,150" />
+                <path d="M 0,600 C 200,600 300,700 500,700" />
+                <path d="M 1536,200 C 1300,200 1200,300 1000,300" />
+                <path d="M 1536,550 C 1350,550 1250,450 1050,450" />
+            </svg>
+        </div>
 
-<!-- ================= CAMERA MODAL ================= -->
+        <!-- Header -->
+        <header class="h-20 w-full flex items-center justify-between px-8 z-10 border-b border-white/5">
+            <!-- Brand -->
+            <div class="flex items-center gap-3">
+                <img alt="MOODIFY.ai Logo" class="w-7 h-7 rounded-lg object-contain" src="/static/logo.png" />
+                <span class="font-display text-base font-bold text-primary tracking-tight">MOODIFY.ai</span>
+            </div>
 
-<div id="cameraModal" class="cameraModal hidden">
+            <!-- Top Center Quotes Ticker -->
+            <div class="hidden md:flex items-center max-w-[320px] lg:max-w-[480px] w-full overflow-hidden relative ticker-wrap h-8 bg-surface-container/30 border border-white/5 px-4 rounded-full backdrop-blur-md">
+                <div id="headerQuotesTicker" class="ticker-content text-[11px] font-medium text-on-surface-variant/80 tracking-wide">
+                    <!-- Dynamic Quotes Joined by // -->
+                </div>
+            </div>
 
-<div class="cameraBox">
+            <!-- Right Login Button Container -->
+            <div id="googleHeaderBtn" class="flex items-center gap-3">
+                <div id="googleBtnContainer" class="scale-90 hover:scale-95 transition-transform duration-200"></div>
+            </div>
+        </header>
 
-<div class="camera-header">
-<span>📷 Live Emotion Detection</span>
-<button id="closeCameraBtn" class="camera-close-btn">✕</button>
-</div>
+        <!-- Main Body -->
+        <div class="flex-1 flex items-center justify-center relative z-10 px-6">
 
-<div class="camera-feed-wrapper">
-<video id="videoFeed" autoplay playsinline muted></video>
-<canvas id="videoCanvas" class="hidden"></canvas>
-<div id="cameraLoading" class="camera-loading">
-<div class="camera-spinner"></div>
-<p>Starting camera...</p>
-</div>
-</div>
+            <!-- CENTER HERO TEXT -->
+            <div class="text-center max-w-2xl flex flex-col items-center gap-8">
+                <!-- Lock Icon Indicator -->
+                <div class="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-white/5 mb-2 shadow-inner hover:border-white/20 transition-all cursor-pointer" onclick="showToast('Verify identity via Google Auth in the header to enter')">
+                    <span id="lockStatusIcon" class="material-symbols-outlined text-[20px] text-white">lock</span>
+                </div>
 
-<div class="camera-stats">
+                <div class="flex flex-col gap-4">
+                    <h2 class="font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
+                        Elevate Your Mind with <span class="bg-gradient-to-r from-white via-white/80 to-white/40 bg-clip-text text-transparent">Music Therapy</span>
+                    </h2>
+                    <p class="text-sm text-on-surface-variant/80 font-body leading-relaxed max-w-lg mx-auto">
+                        Experience an intelligent companion that parses your feelings, maps your emotional state, and calibrates acoustic healing in real-time.
+                    </p>
+                </div>
 
-<div class="cam-stat">
-<span class="cam-stat-label">😶 Emotion</span>
-<span id="camEmotion" class="cam-stat-value">--</span>
-</div>
+                <!-- CTA Button Cluster -->
+                <div class="flex flex-col items-center gap-2 mt-2">
+                    <div class="flex items-center gap-4">
+                        <button id="letsStartBtn" class="px-8 py-3.5 bg-white text-black font-semibold text-xs rounded-full hover:bg-white/90 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-white/5 flex items-center gap-2 cursor-pointer border border-white">
+                            Let's Start <span class="material-symbols-outlined text-[16px] font-bold">arrow_forward</span>
+                        </button>
+                        <button id="heroAboutBtn" class="px-8 py-3.5 border border-white/10 hover:border-white/25 rounded-full text-xs font-semibold text-on-surface hover:bg-white/5 transition-all cursor-pointer">
+                            About
+                        </button>
+                    </div>
+                    <!-- Status message under CTA -->
+                    <p id="authPromptMsg" class="text-[10px] text-on-surface-variant/60 uppercase tracking-widest mt-2 font-bold font-label">
+                        Please Sign In in the header first
+                    </p>
+                </div>
+            </div>
 
-<div class="cam-stat">
-<span class="cam-stat-label">💚 Wellbeing</span>
-<span id="camWellbeing" class="cam-stat-value">--</span>
-</div>
+        </div>
 
-<div class="cam-stat risk-stat">
-<span class="cam-stat-label">⚠️ Risk</span>
-<span id="camRisk" class="cam-stat-value">--</span>
-</div>
+        <!-- Footer -->
+        <footer class="h-20 w-full flex items-center justify-between px-8 z-10 border-t border-white/5 text-xs text-on-surface-variant/50">
+            <!-- Left scroll/spacebar instruction -->
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-[16px] text-primary/80">keyboard</span>
+                <span id="footerPromptText" class="font-label tracking-wide uppercase text-[10px] font-semibold text-on-surface-variant/60">Press Spacebar or Click Let's Start</span>
+            </div>
 
-</div>
+            <!-- Right Sky Horizons -->
+            <div class="font-bold tracking-widest uppercase text-[10px] text-on-surface-variant/60" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+                MADE WITH ❤️ [SKY]
+            </div>
+        </footer>
+    </div>
 
-<div id="camMessage" class="cam-message">Detecting your emotion...</div>
+    <!-- ================= LEFT NAVIGATION SIDEBAR ================= -->
+    <nav id="sidebarNav"
+        class="fixed left-0 top-0 bottom-0 flex flex-col p-4 border-r border-outline-variant/30 bg-surface-dim/80 backdrop-blur-md h-full w-64 z-30 -translate-x-full md:translate-x-0 transition-transform duration-300">
+        <!-- Brand -->
+        <div class="flex items-center gap-3 mb-8 px-2 mt-2 cursor-pointer" onclick="window.location.reload();">
+            <img alt="MOODIFY.ai Logo" class="w-7 h-7 rounded-lg object-contain shadow-md shadow-primary/20"
+                src="/static/logo.png" />
+            <h1 class="font-display text-lg font-bold text-on-surface tracking-tight">MOODIFY.ai</h1>
+        </div>
 
-</div>
+        <!-- Navigation Menu Links -->
+        <div class="flex flex-col gap-1 px-1">
+            <!-- Active Link -->
+            <a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary font-body text-sm font-semibold transition-all duration-200"
+                href="#">
+                <span class="material-symbols-outlined text-[20px]">chat</span>
+                Companion Chat
+            </a>
+            <!-- Inactive Links with Toast Trigger -->
+            <a onclick="showToast('Mood Log analytics coming soon!')"
+                class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[20px]">mood</span>
+                Mood Log
+            </a>
+            <a onclick="showToast('Wellbeing analytics coming soon!')"
+                class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[20px]">insights</span>
+                Analytics
+            </a>
+            <a onclick="showToast('Music library browsing coming soon!')"
+                class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[20px]">auto_stories</span>
+                Library
+            </a>
+            <a onclick="showToast('Student community hub coming soon!')"
+                class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[20px]">group</span>
+                Community
+            </a>
+        </div>
 
-</div>
+        <!-- Start Session CTA -->
+        <div class="mt-auto mb-6 px-2">
+            <button onclick="showToast('Dynamic meditation sessions coming soon!')"
+                class="w-full py-3 px-4 bg-primary text-on-primary rounded-full font-label font-bold text-sm hover:opacity-95 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/10">
+                <span class="material-symbols-outlined text-[18px]"
+                    style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                Start Session
+            </button>
+        </div>
 
-<!-- ================= VOICE MODAL ================= -->
+        <!-- Footer Links -->
+        <div class="flex flex-col gap-1 border-t border-outline-variant/20 pt-4 px-2">
+            <a id="navPlayerToggle"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm transition-all duration-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">music_note</span>
+                Player Panel
+            </a>
+            <a id="sidebarSpotifyLink" href="/spotify-login"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm transition-all duration-200">
+                <span class="material-symbols-outlined text-[18px]">settings_input_hdmi</span>
+                <span id="sidebarSpotifyText">Connect Spotify</span>
+            </a>
+        </div>
+    </nav>
 
-<div id="voiceModal" class="voiceModal hidden">
+    <!-- ================= MAIN CONTENT CONTAINER ================= -->
+    <main class="md:ml-64 ml-0 flex-1 flex flex-col h-screen relative z-10">
 
-<div class="voiceBox">
+        <!-- Top Header -->
+        <header
+            class="h-20 flex items-center justify-between pr-8 border-b border-white/5 bg-background/20 backdrop-blur-md">
+            <!-- Hamburger Menu Button for mobile -->
+            <button id="menuToggleBtn"
+                class="md:hidden w-10 h-10 ml-4 rounded-full glass-panel flex items-center justify-center cursor-pointer hover:border-primary/40 hover:bg-surface-container/60 transition-all text-on-surface"
+                title="Toggle Navigation Menu">
+                <span class="material-symbols-outlined text-[24px]">menu</span>
+            </button>
+            <div class="flex-1"></div>
+            <div class="flex items-center gap-4">
+                <!-- Wellbeing Score badge -->
+                <div
+                    class="glass-panel px-4 py-2 rounded-full flex items-center gap-2.5 border border-primary/20 bg-surface-container-high/65">
+                    <div class="w-2 h-2 rounded-full bg-primary pulse-dot"></div>
+                    <span class="font-display text-xs font-bold text-primary tracking-wide uppercase">
+                        Wellbeing: <span id="wellbeingScore">--</span>
+                    </span>
+                </div>
 
-<div class="voice-header">
-<h3>🎙 Voice Mode</h3>
-<button id="closeVoiceBtn" class="camera-close-btn">✕</button>
-</div>
+                <!-- Spotify toggle widget icon -->
+                <div id="spotifyIcon"
+                    class="w-10 h-10 rounded-full glass-panel flex items-center justify-center cursor-pointer hover:border-primary/40 hover:bg-surface-container/60 transition-all"
+                    title="Toggle Spotify Player">
+                    <img src="/static/spotify.svg" alt="Spotify"
+                        class="w-4 h-4 opacity-80 hover:opacity-100 transition-opacity">
+                </div>
 
-<div id="voiceVisualizer" class="voice-visualizer hidden">
-    <div class="siri-orb" id="siriOrb"></div>
-</div>
+                <!-- Avatar / Logout Button -->
+                <div id="avatarLogoutBtn"
+                    class="w-10 h-10 rounded-full glass-panel overflow-hidden border border-outline-variant/35 flex items-center justify-center cursor-pointer hover:border-primary/40 transition-all"
+                    title="Sign Out from Moodify">
+                    <span class="material-symbols-outlined text-on-surface-variant/80">person</span>
+                </div>
+            </div>
+        </header>
 
-<div id="voiceStatus" class="voice-status">
-Tap Start to activate microphone
-</div>
+        <!-- Content Split Area -->
+        <div class="flex-1 flex overflow-hidden md:p-6 p-4 md:gap-6 gap-4 relative">
 
-<div class="voiceControls">
-<button id="startVoiceBtn" class="premium-btn">Start</button>
-<!-- Hidden dummy stop button to prevent legacy JS errors temporarily -->
-<button id="stopVoiceBtn" class="hidden">Stop</button>
-</div>
+            <!-- CENTER: AI Chat Column -->
+            <section id="chat-container"
+                class="flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
+                <!-- Chat Logs messages -->
+                <div id="chat" class="flex-1 overflow-y-auto p-6 flex flex-col gap-6 custom-scrollbar">
+                    <!-- Empty Landing State -->
+                    <div id="emptyState" class="empty-state">
+                        <img src="/static/logo.png"
+                            class="empty-logo w-12 h-12 object-contain filter drop-shadow(0 0 12px rgba(79, 219, 200, 0.2))">
+                        <h2>How are you feeling today?</h2>
+                        <p>I'm here to listen and help you find the right music therapy.</p>
+                    </div>
+                </div>
 
-</div>
+                <!-- Floating Chatbar Inputs -->
+                <div class="p-4 border-t border-white/5 bg-surface-dim/40 backdrop-blur-md">
+                    <div id="controls"
+                        class="flex items-center gap-3 px-4 py-2 bg-surface-container-lowest/80 rounded-full border border-white/5 focus-within:border-primary/30 transition-all shadow-inner">
+                        <!-- Toggle Camera -->
+                        <button
+                            class="iconBtn p-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-variant/40 transition-colors flex items-center justify-center"
+                            id="cameraBtn" title="Toggle Live Emotion Detection">
+                            <span class="material-symbols-outlined text-[22px]">photo_camera</span>
+                        </button>
+                        <!-- Toggle Microphone Voice Assistant -->
+                        <button
+                            class="iconBtn p-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-variant/40 transition-colors flex items-center justify-center"
+                            id="voiceBtn" title="Toggle Voice Assistant">
+                            <span class="material-symbols-outlined text-[22px]">mic</span>
+                        </button>
+                        <!-- Text field input -->
+                        <input id="userInput"
+                            class="flex-1 bg-transparent border-none focus:ring-0 text-sm text-on-surface placeholder-on-surface-variant/50 font-body outline-none px-2 h-10"
+                            placeholder="Share how you're feeling..." type="text" autocomplete="off" />
+                        <!-- Send message button -->
+                        <button id="sendBtn"
+                            class="w-10 h-10 rounded-full bg-primary text-on-primary hover:bg-primary-container transition-all flex items-center justify-center shadow-md shadow-primary/20">
+                            <span class="material-symbols-outlined text-[20px]"
+                                style="font-variation-settings: 'FILL' 1;">send</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
 
-</div>
+            <!-- RIGHT PANEL: Spotify Drawer Companion -->
+            <aside id="miniPlayer" class="spotify-wrapper active w-80 flex flex-col gap-6 transition-all duration-300">
+                <!-- Spotify Player Card -->
+                <div class="glass-panel rounded-2xl p-5 border-outline-variant/10 shadow-lg flex flex-col gap-4">
 
-<!-- ================= EMERGENCY ================= -->
+                    <!-- Spotify Authentication Fallback -->
+                    <div id="spotifyFallback"
+                        class="spotify-fallback text-center py-4 bg-surface-container-low/50 rounded-xl border border-white/5">
+                        <p class="text-xs text-on-surface-variant mb-3 font-medium">Connect Spotify to listen to therapy
+                            tracks</p>
+                        <a href="/spotify-login"
+                            class="spotify-login-btn inline-block px-4 py-2 bg-white text-black text-xs font-semibold rounded-full hover:bg-gray-200 transition-colors shadow-md shadow-white/10">Connect</a>
+                    </div>
 
-<div id="emergencyPopup" class="emergency-hidden">
+                    <!-- Spotify Connected Badge (shown after auth) -->
+                    <div id="spotifyConnectedBadge"
+                        class="hidden text-center py-3 px-4 bg-surface-container-low/50 rounded-xl border border-white/10">
+                        <div class="flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[16px] text-white"
+                                style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                            <span class="text-xs text-white font-semibold tracking-wide">Spotify Connected</span>
+                        </div>
+                    </div>
 
-<div class="emergency-box">
+                    <!-- Song Search bar -->
+                    <div class="search-row flex gap-2">
+                        <input id="musicSearch"
+                            class="flex-1 px-4 py-2 text-xs rounded-full bg-surface-container-lowest border border-white/5 text-on-surface placeholder-on-surface-variant/40 outline-none focus:border-primary/40 transition-colors"
+                            placeholder="Search song or artist..." type="text" />
+                        <button id="searchPlayBtn"
+                            class="w-8 h-8 rounded-full bg-surface-container-high hover:bg-surface-variant transition-colors flex items-center justify-center"
+                            title="Search and play">
+                            <span class="material-symbols-outlined text-[16px] text-on-surface">search</span>
+                        </button>
+                    </div>
 
-<h2>You matter.</h2>
+                    <!-- Album Cover Art Frame -->
+                    <div class="album-section relative w-full aspect-square rounded-xl overflow-hidden shadow-lg group">
+                        <img id="trackImage" alt="Album Cover"
+                            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                            src="https://i1.sndcdn.com/artworks-uAn8HpTmcjKSAoP6-AzBtOg-t1080x1080.jpg" />
+                        <div
+                            class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none">
+                        </div>
 
-<p id="emergencyMessage">
+                        <!-- Track Details overlay -->
+                        <div class="absolute bottom-3 left-3 right-3 pointer-events-none">
+                            <h4 id="trackTitle" class="font-display font-semibold text-on-surface text-sm truncate">No
+                                song playing</h4>
+                            <p id="trackArtist" class="text-[10px] text-on-surface-variant font-label truncate mt-0.5">
+                                Moodify Player</p>
+                        </div>
+                    </div>
 
-Moodify is here with you. Don't worry — we've got your back.
-If you're feeling overwhelmed, consider reaching out to a trusted friend,
-family member, or a mental health professional.
+                    <!-- Progress Tracker Slider -->
+                    <div class="flex flex-col gap-1.5">
+                        <input id="songSlider"
+                            class="w-full h-1 bg-surface-container rounded-full outline-none appearance-none cursor-pointer accent-primary"
+                            type="range" min="0" max="100" value="0" />
+                        <div class="flex justify-between text-[9px] text-on-surface-variant font-label">
+                            <span id="currentTime">0:00</span>
+                            <span id="totalTime">0:00</span>
+                        </div>
+                    </div>
 
-</p>
+                    <!-- Playback controls -->
+                    <div class="flex items-center justify-center gap-6">
+                        <button id="prevBtn" class="text-on-surface-variant hover:text-on-surface transition-colors"
+                            title="Previous track">
+                            <span class="material-symbols-outlined text-[24px]">skip_previous</span>
+                        </button>
+                        <button id="playPauseBtn"
+                            class="w-12 h-12 rounded-full bg-white text-black hover:bg-gray-200 hover:scale-[1.03] transition-all flex items-center justify-center shadow-md shadow-white/10"
+                            title="Play / Pause">
+                            <span id="playPauseIcon" class="material-symbols-outlined text-[28px]"
+                                style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                        </button>
+                        <button id="nextBtn" class="text-on-surface-variant hover:text-on-surface transition-colors"
+                            title="Next track">
+                            <span class="material-symbols-outlined text-[24px]">skip_next</span>
+                        </button>
+                    </div>
 
-<button onclick="closeEmergency()">I understand</button>
+                    <!-- Volume Bar -->
+                    <div class="volume-container flex items-center gap-2 pt-2 border-t border-white/5">
+                        <span class="material-symbols-outlined text-[16px] text-on-surface-variant">volume_up</span>
+                        <input id="volumeSlider"
+                            class="flex-1 h-1 bg-surface-container rounded-full outline-none appearance-none cursor-pointer accent-primary"
+                            type="range" min="0" max="100" value="60" />
+                    </div>
 
-</div>
+                </div>
 
-</div>
+                <!-- Footer Attribution -->
+                <div class="text-center mt-auto pb-1 text-on-surface-variant/40 select-none pointer-events-none">
+                    <p class="text-[10px] tracking-wide font-body">MADE WITH ❤️</p>
+                    <p class="text-xs font-bold mt-1 tracking-widest text-on-surface-variant/70"
+                        style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">SKY</p>
+                </div>
+            </aside>
 
-<!-- ================= JS ================= -->
+        </div>
+    </main>
 
-<script src="/static/script.js" defer></script>
+    <!-- ================= CAMERA MODAL ================= -->
+    <div id="cameraModal" class="cameraModal hidden">
+        <div class="cameraBox">
+            <div class="flex justify-between items-center mb-5 pb-3 border-b border-white/5">
+                <span class="font-display font-semibold text-sm text-on-surface flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-[#ef4444] pulse-dot"></span> Live Emotion Detection
+                </span>
+                <button id="closeCameraBtn" class="text-on-surface-variant hover:text-on-surface transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
 
+            <div class="camera-feed-wrapper">
+                <video id="videoFeed" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                <canvas id="videoCanvas" class="hidden"></canvas>
+                <div id="cameraLoading" class="camera-loading">
+                    <div class="camera-spinner"></div>
+                    <p class="text-xs text-on-surface-variant">Accessing Camera feed...</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                <div class="bg-white/5 border border-white/5 rounded-xl p-3 text-center">
+                    <span
+                        class="block text-[9px] uppercase tracking-wider text-on-surface-variant font-label mb-1">Emotion</span>
+                    <span id="camEmotion" class="text-sm font-bold text-primary">--</span>
+                </div>
+                <div class="bg-white/5 border border-white/5 rounded-xl p-3 text-center">
+                    <span
+                        class="block text-[9px] uppercase tracking-wider text-on-surface-variant font-label mb-1">Wellbeing</span>
+                    <span id="camWellbeing" class="text-sm font-bold text-primary">--</span>
+                </div>
+                <div class="bg-white/5 border border-white/5 rounded-xl p-3 text-center">
+                    <span
+                        class="block text-[9px] uppercase tracking-wider text-on-surface-variant font-label mb-1">Risk</span>
+                    <span id="camRisk" class="text-sm font-bold text-red-400" data-risk="LOW">--</span>
+                </div>
+            </div>
+
+            <div id="camMessage" class="text-center text-xs italic text-on-surface-variant/80">Detecting emotion in
+                real-time...</div>
+        </div>
+    </div>
+
+    <!-- ================= VOICE ASSISTANT MODAL ================= -->
+    <div id="voiceModal" class="voiceModal hidden">
+        <div class="voiceBox">
+            <div class="w-full flex justify-between items-center mb-5 pb-3 border-b border-white/5">
+                <span class="font-display font-semibold text-sm text-on-surface">Voice Mode</span>
+                <button id="closeVoiceBtn" class="text-on-surface-variant hover:text-on-surface transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+
+            <div id="voiceVisualizer" class="flex items-center justify-center h-28 w-full hidden">
+                <!-- Pulsating glowing gradient Siri orb -->
+                <div id="siriOrb" class="siri-orb"></div>
+            </div>
+
+            <div id="voiceStatus" class="voice-status text-sm text-on-surface-variant min-h-[20px] my-2">
+                Click Start to activate microphone
+            </div>
+
+            <div class="w-full flex justify-center pt-2">
+                <button id="startVoiceBtn"
+                    class="px-8 py-3 bg-primary text-on-primary font-semibold text-xs rounded-full hover:bg-primary-fixed-dim transition-all shadow-md shadow-primary/20 w-44">Start
+                    Assistant</button>
+                <button id="stopVoiceBtn" class="hidden">Stop</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= EMERGENCY DIALOG OVERLAY ================= -->
+    <div id="emergencyPopup" style="display: none;">
+        <div class="emergency-box">
+            <h2 class="font-display font-bold text-xl text-red-400 mb-3 flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[22px]">favorite</span> You matter.
+            </h2>
+            <p id="emergencyMessage" class="text-xs leading-relaxed text-on-surface-variant/90 mb-6">
+                Moodify is here with you. Don't worry — we've got your back.
+                If you're feeling overwhelmed, consider reaching out to a trusted friend,
+                family member, or a mental health professional.
+            </p>
+            <button onclick="closeEmergency()"
+                class="px-6 py-2.5 bg-red-500 text-white text-xs font-bold rounded-full hover:bg-red-600 transition-colors shadow-md shadow-red-500/10">I
+                understand</button>
+        </div>
+    </div>
+
+    <!-- ================= TOASTS NOTIFICATIONS ================= -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- MAIN SCRIPT -->
+    <script src="/static/script.js?v=3" defer></script>
+
+    <!-- TOAST ACTION FUNCTION -->
+    <script>
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<span class="material-symbols-outlined text-primary text-[18px]">info</span><span class="text-xs font-medium">${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 20);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+    </script>
 </body>
+
 </html>

@@ -61,3 +61,7 @@ node_modules/
 # Spotify OAuth cache
 
 .spotify_cache
+
+# User logs
+user_logins.csv
+

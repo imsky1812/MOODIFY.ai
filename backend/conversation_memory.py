@@ -27,12 +27,24 @@ def add_user_message(text):
     conversation_history.append(message)
 
 
+def add_assistant_message(text):
+    """Store assistant message in conversation history."""
+    
+    message = {
+        "role": "assistant",
+        "text": text,
+        "timestamp": datetime.utcnow()
+    }
+
+    conversation_history.append(message)
+
+
 # ================= GET HISTORY =================
 
 def get_history():
-    """Return only text messages for AI processing."""
+    """Return all messages formatted for the LLM API."""
     
-    return [msg["text"] for msg in conversation_history]
+    return [{"role": msg["role"], "content": msg["text"]} for msg in conversation_history]
 
 
 # ================= MESSAGE COUNT =================
@@ -46,10 +58,10 @@ def message_count():
 # ================= LAST N MESSAGES =================
 
 def last_messages(n=10):
-    """Return last N messages as text."""
+    """Return last N messages as role-prefixed text."""
     
     messages = list(conversation_history)[-n:]
-    return [msg["text"] for msg in messages]
+    return [f"{msg['role']}: {msg['text']}" for msg in messages]
 
 
 # ================= WELLBEING SCORE =================

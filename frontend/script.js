@@ -20,6 +20,218 @@ let isPlaying = false
 
 let searchLock = false
 
+// Auth State
+let isAuthenticated = false;
+let googleClientId = "";
+let isWelcomeGreeted = false;
+window.currentMistColor = null;
+let hasAutoPlayedInitial = false;
+let isAutoPlayingWellbeing = true;
+
+/* =========================================================
+   AUTHENTICATION & LOCK SCREEN TRANSITION
+=========================================================*/
+
+async function checkAuthStatus() {
+    try {
+        const res = await fetch("/api/auth/status");
+        const data = await res.json();
+        
+        googleClientId = data.google_client_id || "";
+        
+        if (data.logged_in) {
+            isAuthenticated = true;
+            updateAuthUI(data.user);
+            // Skip slide animation on reload so it's instantaneous
+            const landing = document.getElementById("landingPage");
+            if (landing) {
+                landing.style.transition = "none";
+                landing.classList.add("slide-up-exit");
+            }
+            initCompanion();
+        } else {
+            isAuthenticated = false;
+            updateAuthUI(null);
+            initGoogleAuth();
+        }
+    } catch (e) {
+        console.error("Auth status check failed:", e);
+        isAuthenticated = false;
+        updateAuthUI(null);
+    }
+}
+
+function initGoogleAuth() {
+    if (!googleClientId) {
+        console.warn("No GOOGLE_CLIENT_ID configured in backend.");
+        const container = document.getElementById("googleBtnContainer");
+        if (container) {
+            container.innerHTML = `<span class="text-[10px] text-on-surface-variant/50">Unconfigured</span>`;
+        }
+        return;
+    }
+    
+    try {
+        if (typeof google === "undefined" || !google.accounts) {
+            setTimeout(initGoogleAuth, 500);
+            return;
+        }
+        
+        google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: handleCredentialResponse
+        });
+        
+        google.accounts.id.renderButton(
+            document.getElementById("googleBtnContainer"),
+            {
+                theme: "filled_black",
+                size: "medium",
+                shape: "pill",
+                text: "signin_with"
+            }
+        );
+    } catch (err) {
+        console.error("Failed to initialize Google Identity Services:", err);
+    }
+}
+
+async function handleCredentialResponse(response) {
+    try {
+        const res = await fetch("/api/auth/google", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ credential: response.credential })
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            isAuthenticated = true;
+            showToast(`Logged in successfully! Welcome, ${data.user.name}`);
+            updateAuthUI(data.user);
+            
+            const promptMsg = document.getElementById("authPromptMsg");
+            if (promptMsg) {
+                promptMsg.innerHTML = `<span class="text-green-400 font-bold">✓ UNLOCKED</span>. Press Spacebar or click Let's Start to begin!`;
+            }
+            const lockIcon = document.getElementById("lockStatusIcon");
+            if (lockIcon) {
+                lockIcon.textContent = "lock_open";
+                lockIcon.classList.add("text-green-400");
+            }
+            
+            initCompanion();
+        } else {
+            showToast("Google authentication failed.");
+        }
+    } catch (err) {
+        console.error("Login verification request failed:", err);
+        showToast("Server error during login.");
+    }
+}
+
+function updateAuthUI(user) {
+    const authContainer = document.getElementById("googleHeaderBtn");
+    if (!authContainer) return;
+    
+    if (user) {
+        authContainer.innerHTML = `
+            <div class="flex items-center gap-2 bg-surface-container/60 border border-white/5 px-4 py-1.5 rounded-full text-xs text-on-surface">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-400 pulse-dot"></span>
+                <span class="font-semibold tracking-wide">Secure Session</span>
+            </div>
+        `;
+        
+        // Update the dashboard avatar styling if authenticated
+        const avatarBtn = document.getElementById("avatarLogoutBtn");
+        if (avatarBtn) {
+            avatarBtn.title = `Signed in as ${user.name}. Click to Logout.`;
+            if (user.picture) {
+                avatarBtn.innerHTML = `<img src="${user.picture}" alt="${user.name}" class="w-full h-full object-cover">`;
+            } else {
+                avatarBtn.innerHTML = `<span class="material-symbols-outlined text-green-400">person</span>`;
+            }
+        }
+    } else {
+        authContainer.innerHTML = `
+            <div id="googleBtnContainer" class="scale-90 hover:scale-95 transition-transform duration-200"></div>
+        `;
+        
+        // Reset dashboard avatar
+        const avatarBtn = document.getElementById("avatarLogoutBtn");
+        if (avatarBtn) {
+            avatarBtn.title = "Sign Out from Moodify";
+            avatarBtn.innerHTML = `<span class="material-symbols-outlined text-on-surface-variant/80">person</span>`;
+        }
+    }
+}
+
+async function logout() {
+    try {
+        await fetch("/api/auth/logout", { method: "POST" });
+        isAuthenticated = false;
+        hasAutoPlayedInitial = false;
+        isAutoPlayingWellbeing = true;
+        showToast("Signed out successfully.");
+        
+        const landing = document.getElementById("landingPage");
+        if (landing) {
+            landing.style.transition = ""; 
+            landing.classList.remove("slide-up-exit");
+        }
+        
+        const lockIcon = document.getElementById("lockStatusIcon");
+        if (lockIcon) {
+            lockIcon.textContent = "lock";
+            lockIcon.classList.remove("text-green-400");
+        }
+        
+        const promptMsg = document.getElementById("authPromptMsg");
+        if (promptMsg) {
+            promptMsg.innerHTML = `Please Sign In in the header first`;
+        }
+        
+        updateAuthUI(null);
+        initGoogleAuth();
+    } catch (e) {
+        console.error("Logout failed:", e);
+    }
+}
+
+function triggerSlideUp() {
+    if (!isAuthenticated) {
+        const btn = document.getElementById("letsStartBtn");
+        const lock = document.getElementById("lockStatusIcon");
+        if (btn) btn.classList.add("auth-warning");
+        if (lock) lock.classList.add("auth-warning");
+        showToast("Please sign in with Google in the header to unlock the companion.");
+        setTimeout(() => {
+            if (btn) btn.classList.remove("auth-warning");
+            if (lock) lock.classList.remove("auth-warning");
+        }, 450);
+        return;
+    }
+    
+    const landing = document.getElementById("landingPage");
+    if (landing) {
+        landing.style.transition = ""; 
+        landing.classList.add("slide-up-exit");
+        showToast("Companion unlocked. Elevating resonance levels...");
+        // Trigger welcome greetings once entered
+        if (!isWelcomeGreeted) {
+            welcomeUser();
+            isWelcomeGreeted = true;
+        }
+        checkAndAutoPlay();
+    }
+}
+
+function initCompanion() {
+    if (typeof fetchSpotifyToken === "function") {
+        fetchSpotifyToken();
+    }
+}
+
 /* =========================================================
    PAGE INIT — stop any lingering camera session immediately
 =========================================================*/
@@ -31,6 +243,98 @@ document.addEventListener("DOMContentLoaded", () => {
     const v = document.getElementById("videoFeed");
     if (m) m.classList.add("hidden");
     if (v) v.src = "";
+
+    // Check Authentication Status
+    checkAuthStatus();
+
+    // Attach Start transition listener
+    const startBtn = document.getElementById("letsStartBtn");
+    if (startBtn) {
+        startBtn.addEventListener("click", triggerSlideUp);
+    }
+
+    // Avatar Logout click listener
+    const avatarBtn = document.getElementById("avatarLogoutBtn");
+    if (avatarBtn) {
+        avatarBtn.addEventListener("click", () => {
+            if (confirm("Are you sure you want to sign out from Moodify?")) {
+                logout();
+            }
+        });
+    }
+
+    // Spacebar listener for slide up transition
+    window.addEventListener("keydown", (e) => {
+        if (e.code === "Space" || e.keyCode === 32) {
+            const active = document.activeElement;
+            if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) {
+                return;
+            }
+            const landing = document.getElementById("landingPage");
+            if (landing && !landing.classList.contains("slide-up-exit")) {
+                e.preventDefault();
+                triggerSlideUp();
+            }
+        }
+    });
+
+    // About Sliding Panel Listeners
+    const heroAboutBtn = document.getElementById("heroAboutBtn");
+    const aboutPanel = document.getElementById("aboutPanel");
+    const closeAboutBtn = document.getElementById("closeAboutBtn");
+
+    if (heroAboutBtn && aboutPanel) {
+        heroAboutBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            aboutPanel.classList.remove("translate-x-full");
+        });
+    }
+
+    if (closeAboutBtn && aboutPanel) {
+        closeAboutBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            aboutPanel.classList.add("translate-x-full");
+        });
+    }
+
+    document.addEventListener("click", (e) => {
+        if (aboutPanel && !aboutPanel.classList.contains("translate-x-full")) {
+            if (!aboutPanel.contains(e.target) && e.target !== heroAboutBtn && !heroAboutBtn.contains(e.target)) {
+                aboutPanel.classList.add("translate-x-full");
+            }
+        }
+    });
+
+    // Random Quotes Ticker for Header
+    const quotes = [
+        "Music is the shorthand of emotion",
+        "Where words fail, music speaks",
+        "Music can heal what words cannot",
+        "One good thing about music, when it hits you, you feel no pain",
+        "Mental health is not a destination, but a process",
+        "Music has the ability to take people out of themselves",
+        "Music washes away from the soul the dust of everyday life",
+        "Music is the medicine of the mind",
+        "To heal is to touch with love that which we previously touched with fear",
+        "Beautiful music is the art of the prophets that can calm the agitations of the soul",
+        "Sound waves stimulate autonomic harmony",
+        "Acoustic frequency regulates stress hormones"
+    ];
+
+    const selected = [];
+    const pool = [...quotes];
+    for (let i = 0; i < 5; i++) {
+        if (pool.length === 0) break;
+        const idx = Math.floor(Math.random() * pool.length);
+        selected.push(pool.splice(idx, 1)[0]);
+    }
+
+    const quoteString = selected.join("  //  ") + "  //  ";
+    const ticker = document.getElementById("headerQuotesTicker");
+    if (ticker) {
+        // Set double string for infinite seamless horizontal marquee
+        ticker.textContent = quoteString + quoteString;
+    }
 });
 
 window.addEventListener("beforeunload", () => {
@@ -234,6 +538,16 @@ async function processAudioRecording() {
         }
         if (data.reply) {
            addMessage(data.reply, "bot");
+
+           if(data.command){
+               handleMusicCommand(data.command)
+           } else if(data.music_query){
+               const musicSearchEl = document.getElementById("musicSearch")
+               if(musicSearchEl){
+                   musicSearchEl.value=data.music_query
+               }
+               searchAndPlay()
+           }
            
            if (data.audio_b64) {
                const audio = new Audio("data:audio/mp3;base64," + data.audio_b64);
@@ -350,53 +664,84 @@ if(startVoiceBtn){
 }
 
 /* =========================================================
-   SPOTIFY SDK INIT
+   SPOTIFY SDK INIT & TOKEN FETCHING
 =========================================================*/
 
-window.onSpotifyWebPlaybackSDKReady = function () {
-
-    console.log("Spotify SDK Ready")
-
+function fetchSpotifyToken() {
     fetch("/spotify-token")
-        .then(res => res.json())
+        .then(res => {
+            if (res.status === 401) {
+                console.warn("Spotify token unauthorized");
+                return { error: "unauthorized" };
+            }
+            return res.json();
+        })
         .then(data => {
-
-            if (!data.token || data.error) {
-                console.warn("Spotify not authenticated")
-                showSpotifyFallback()
-                return
+            if (!data || !data.token || data.error) {
+                console.warn("Spotify not authenticated");
+                showSpotifyFallback();
+                return;
             }
 
-            spotifyToken = data.token
+            spotifyToken = data.token;
 
-            spotifyPlayer = new Spotify.Player({
-                name: "MOODIFY Player",
-                getOAuthToken: cb => cb(spotifyToken),
-                volume: 0.6
-            })
+            if (!spotifyPlayer) {
+                spotifyPlayer = new Spotify.Player({
+                    name: "MOODIFY Player",
+                    getOAuthToken: cb => cb(spotifyToken),
+                    volume: 0.6
+                });
 
-            spotifyPlayer.addListener("ready", ({ device_id }) => {
+                spotifyPlayer.addListener("ready", ({ device_id }) => {
+                    deviceId = device_id;
 
-                deviceId = device_id
+                    const fallback = document.getElementById("spotifyFallback");
+                    const connectedBadge = document.getElementById("spotifyConnectedBadge");
+                    const sidebarSpotifyLink = document.getElementById("sidebarSpotifyLink");
+                    const sidebarSpotifyText = document.getElementById("sidebarSpotifyText");
 
-                fetch("https://api.spotify.com/v1/me/player", {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${spotifyToken}`
-                    },
-                    body: JSON.stringify({
-                        device_ids: [deviceId],
-                        play: false
-                    })
-                })
-            })
+                    if (fallback) fallback.classList.add("hidden");
+                    if (connectedBadge) connectedBadge.classList.remove("hidden");
+                    if (sidebarSpotifyLink) {
+                        sidebarSpotifyLink.removeAttribute("href");
+                        sidebarSpotifyLink.classList.add("text-white");
+                        sidebarSpotifyLink.classList.remove("text-on-surface-variant");
+                    }
+                    if (sidebarSpotifyText) sidebarSpotifyText.textContent = "Spotify Connected";
 
-            spotifyPlayer.addListener("player_state_changed", handlePlayerState)
+                    fetch("https://api.spotify.com/v1/me/player", {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${spotifyToken}`
+                        },
+                        body: JSON.stringify({
+                            device_ids: [deviceId],
+                            play: false
+                        })
+                    }).then(() => {
+                        checkAndAutoPlay();
+                    }).catch(e => {
+                        console.error("Error setting active Spotify device:", e);
+                        checkAndAutoPlay();
+                    });
+                });
 
-            spotifyPlayer.connect()
-        })
+                spotifyPlayer.addListener("player_state_changed", handlePlayerState);
+                spotifyPlayer.connect();
+            }
+        }).catch(err => {
+            console.error("Error fetching Spotify token:", err);
+            showSpotifyFallback();
+        });
 }
+
+window.onSpotifyWebPlaybackSDKReady = function () {
+    console.log("Spotify SDK Ready");
+    if (isAuthenticated) {
+        fetchSpotifyToken();
+    }
+};
 
 /* =========================================================
    PLAYER STATE
@@ -407,8 +752,24 @@ function handlePlayerState(state){
     if(!state) return
 
     const playBtn = document.getElementById("playPauseBtn")
+    const playIcon = document.getElementById("playPauseIcon")
     const album = document.getElementById("trackImage")
     const wrapper = document.querySelector(".spotify-wrapper")
+
+    // ── Extract track info from SDK state ──
+    const currentTrack = state.track_window && state.track_window.current_track
+    if (currentTrack) {
+        const title = document.getElementById("trackTitle")
+        const artist = document.getElementById("trackArtist")
+
+        if (album && currentTrack.album && currentTrack.album.images && currentTrack.album.images.length > 0) {
+            const url = currentTrack.album.images[0].url;
+            album.src = url;
+            extractAlbumColor(url);
+        }
+        if (title) title.innerText = currentTrack.name || "No song playing"
+        if (artist) artist.innerText = (currentTrack.artists && currentTrack.artists[0]) ? currentTrack.artists[0].name : "Moodify Player"
+    }
 
     currentPosition = state.position
     currentDuration = state.duration
@@ -440,8 +801,8 @@ function handlePlayerState(state){
 
     isPlaying = !state.paused
 
-    if(playBtn){
-        playBtn.innerText = isPlaying ? "⏸" : "▶"
+    if(playIcon){
+        playIcon.textContent = isPlaying ? "pause" : "play_arrow"
     }
 
     if(album && wrapper){
@@ -460,18 +821,26 @@ function handlePlayerState(state){
 
     /* AUTO NEXT */
 
-    if(state.paused && state.position === 0){
+    if(state.paused && state.position === 0 && state.track_window && state.track_window.current_track){
+        const trackId = state.track_window.current_track.id || state.track_window.current_track.uri;
+        if (trackId && window.lastHandledEndedTrackId !== trackId) {
+            window.lastHandledEndedTrackId = trackId;
 
-        currentTrackIndex++
-
-        if(currentTrackIndex >= trackQueue.length - 2){
-            extendQueue()
+            if (isAutoPlayingWellbeing) {
+                playWellbeingSong();
+            } else {
+                currentTrackIndex++
+                if(currentTrackIndex >= trackQueue.length - 2){
+                    extendQueue()
+                }
+                if(currentTrackIndex >= trackQueue.length){
+                    isAutoPlayingWellbeing = true;
+                    playWellbeingSong();
+                } else {
+                    playTrack(trackQueue[currentTrackIndex])
+                }
+            }
         }
-
-        if(currentTrackIndex < trackQueue.length){
-            playTrack(trackQueue[currentTrackIndex])
-        }
-
     }
 
 }
@@ -493,10 +862,10 @@ function updateProgressBar(){
 
     songSlider.style.background = `linear-gradient(
         to right,
-        #1db954 0%,
-        #1db954 ${progress}%,
-        rgba(255,255,255,0.25) ${progress}%,
-        rgba(255,255,255,0.25) 100%
+        #ffffff 0%,
+        #ffffff ${progress}%,
+        rgba(255,255,255,0.15) ${progress}%,
+        rgba(255,255,255,0.15) 100%
     )`
 
     if(currentTime) currentTime.innerText = formatTime(currentPosition)
@@ -577,6 +946,8 @@ async function searchAndPlay(){
 
         if(!tracks || tracks.length === 0) return
 
+        isAutoPlayingWellbeing = false;
+
         trackQueue = tracks
         currentTrackIndex = 0
 
@@ -645,8 +1016,12 @@ function playTrack(track){
     const artist = document.getElementById("trackArtist")
 
     if(album){
-        album.src = track.image || "/static/music.png"
-        updateMiniPlayerColor(track.image)
+        album.src = track.image || "/static/music.png";
+        if (track.image) {
+            extractAlbumColor(track.image);
+        } else {
+            window.currentMistColor = null;
+        }
     }
 
     if(title) title.innerText = track.name
@@ -655,60 +1030,132 @@ function playTrack(track){
 }
 
 /* =========================================================
-   ALBUM COLOR EXTRACTION
+   ALBUM COLOR EXTRACTION — DISABLED
+   Removed to preserve monochromatic obsidian-white theme.
+   Player panel uses pure glass-panel styling from CSS.
 =========================================================*/
 
 function updateMiniPlayerColor(imageUrl){
+    // Clear any stale inline background from previous sessions
+    const mp = document.getElementById("miniPlayer")
+    if(mp) mp.style.background = ""
+}
 
-    if(!imageUrl) return
+function extractAlbumColor(imageUrl) {
+    if (!imageUrl) return;
 
-    const img = new Image()
-    img.crossOrigin = "anonymous"
-    img.src = imageUrl
-
-    img.onload = function(){
-
-        const canvas = document.createElement("canvas")
-        const ctx = canvas.getContext("2d")
-
-        canvas.width = 50
-        canvas.height = 50
-
-        ctx.drawImage(img,0,0,50,50)
-
-        const data = ctx.getImageData(0,0,50,50).data
-
-        let r=0,g=0,b=0,count=0
-
-        for(let i=0;i<data.length;i+=20){
-
-            r+=data[i]
-            g+=data[i+1]
-            b+=data[i+2]
-            count++
-
-        }
-
-        r=Math.floor(r/count)
-        g=Math.floor(g/count)
-        b=Math.floor(b/count)
-
-        const miniPlayer=document.getElementById("miniPlayer")
-
-        if(miniPlayer){
-
-            miniPlayer.style.background=`
-                linear-gradient(
-                    135deg,
-                    rgba(${r},${g},${b},0.45),
-                    rgba(10,10,15,0.85)
-                )
-            `
-
-        }
-
+    // Fallback to white if it's a default static image
+    if (imageUrl.includes("music.png") || imageUrl.includes("logo.png")) {
+        window.currentMistColor = null;
+        return;
     }
 
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = function() {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1;
+        canvas.height = 1;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+            ctx.drawImage(img, 0, 0, 1, 1);
+            try {
+                const imgData = ctx.getImageData(0, 0, 1, 1).data;
+                window.currentMistColor = {
+                    r: imgData[0],
+                    g: imgData[1],
+                    b: imgData[2]
+                };
+            } catch (e) {
+                console.warn("Could not extract image data:", e);
+            }
+        }
+    };
+    img.onerror = function() {
+        console.warn("Failed to load image for color extraction:", img.src);
+    };
+    
+    // Append a unique cache-buster string to bypass browser cache non-CORS headers
+    const separator = imageUrl.indexOf('?') >= 0 ? '&' : '?';
+    img.src = imageUrl + separator + "cachebust=" + Math.random().toString(36).substr(2, 5);
+}
+
+/* =========================================================
+   SPOTIFY AUTO-PLAY & WELLBEING ALIGNMENT
+=========================================================*/
+
+function checkAndAutoPlay() {
+    if (hasAutoPlayedInitial) return;
+    if (!isAuthenticated) return;
+    if (!deviceId || !spotifyToken) return;
+
+    // Check if landing page has been exited (companion started)
+    const landing = document.getElementById("landingPage");
+    if (landing && landing.classList.contains("slide-up-exit")) {
+        hasAutoPlayedInitial = true;
+        playInitialAutoSong();
+    }
+}
+
+async function playInitialAutoSong() {
+    isAutoPlayingWellbeing = true;
+    try {
+        const query = "calm acoustic instrumental";
+        const res = await fetch(`/spotify-search?query=${encodeURIComponent(query)}`);
+        const tracks = await res.json();
+        if (tracks && tracks.length > 0) {
+            // Pick a random track from the search results
+            const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+            
+            // Set the queue to contain just this track initially
+            trackQueue = [randomTrack];
+            currentTrackIndex = 0;
+            
+            playTrack(randomTrack);
+            showToast("Playing calm acoustic music...");
+        } else {
+            console.warn("No calm acoustic tracks found on search.");
+        }
+    } catch (err) {
+        console.error("Error playing initial auto song:", err);
+    }
+}
+
+async function playWellbeingSong() {
+    // Get current wellbeing score
+    let score = 50;
+    const scoreEl = document.getElementById("wellbeingScore");
+    if (scoreEl) {
+        const val = parseInt(scoreEl.textContent);
+        if (!isNaN(val)) {
+            score = val;
+        }
+    }
+    
+    // Map score to query (all must be calm acoustic instrumental but with vibe matched to score)
+    let query = "calm acoustic instrumental";
+    if (score < 45) {
+        query = "sad acoustic instrumental";
+    } else if (score > 75) {
+        query = "happy acoustic instrumental";
+    }
+    
+    try {
+        const res = await fetch(`/spotify-search?query=${encodeURIComponent(query)}`);
+        const tracks = await res.json();
+        if (tracks && tracks.length > 0) {
+            // Pick a random track from the search results
+            const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+            
+            trackQueue = [randomTrack];
+            currentTrackIndex = 0;
+            
+            playTrack(randomTrack);
+            showToast(`Adjusting vibe to wellbeing score: ${score}%`);
+        }
+    } catch (err) {
+        console.error("Error playing wellbeing song:", err);
+    }
 }
 
 /* =========================================================
@@ -766,15 +1213,24 @@ if(nextBtn){
 
     nextBtn.addEventListener("click",()=>{
 
-        if(trackQueue.length===0) return
+        if (isAutoPlayingWellbeing) {
+            playWellbeingSong();
+            return;
+        }
+
+        if(trackQueue.length===0) {
+            if(spotifyPlayer) spotifyPlayer.nextTrack()
+            return
+        }
 
         currentTrackIndex++
 
         if(currentTrackIndex>=trackQueue.length){
-            currentTrackIndex=0
+            isAutoPlayingWellbeing = true;
+            playWellbeingSong();
+        } else {
+            playTrack(trackQueue[currentTrackIndex])
         }
-
-        playTrack(trackQueue[currentTrackIndex])
 
     })
 
@@ -786,7 +1242,15 @@ if(prevBtn){
 
     prevBtn.addEventListener("click",()=>{
 
-        if(trackQueue.length===0) return
+        if (isAutoPlayingWellbeing) {
+            if(spotifyPlayer) spotifyPlayer.seek(0)
+            return
+        }
+
+        if(trackQueue.length===0) {
+            if(spotifyPlayer) spotifyPlayer.previousTrack()
+            return
+        }
 
         currentTrackIndex--
 
@@ -800,65 +1264,64 @@ if(prevBtn){
 
 }
 
-/* =========================================================
-   MINI PLAYER HOVER + CLICK OUTSIDE TO CLOSE
-=========================================================*/
-
 const spotifyIcon=document.getElementById("spotifyIcon")
 const miniPlayer=document.getElementById("miniPlayer")
-
-let closeTimer=null
+const navPlayerToggle=document.getElementById("navPlayerToggle")
 
 function closeMiniPlayer() {
-    if (closeTimer) clearTimeout(closeTimer)
-    miniPlayer.classList.remove("active")
+    if (miniPlayer) miniPlayer.classList.remove("active")
 }
 
-if(spotifyIcon && miniPlayer){
-
-    // Open on hover
-    spotifyIcon.addEventListener("mouseenter",()=>{
-        miniPlayer.classList.add("active")
-        if(closeTimer) clearTimeout(closeTimer)
-    })
-
-    // Keep open while hovering player
-    miniPlayer.addEventListener("mouseenter",()=>{
-        if(closeTimer) clearTimeout(closeTimer)
-    })
-
-    // Gentle close when mouse leaves BOTH icon & player
-    spotifyIcon.addEventListener("mouseleave",()=>{
-        closeTimer=setTimeout(()=>{
-            if(!miniPlayer.matches(":hover")) closeMiniPlayer()
-        },400)
-    })
-
-    miniPlayer.addEventListener("mouseleave",()=>{
-        closeTimer=setTimeout(()=>{
-            if(!spotifyIcon.matches(":hover")) closeMiniPlayer()
-        },400)
-    })
-
-    // Click the icon → go to Spotify login
-    spotifyIcon.addEventListener("click",(e)=>{
-        e.preventDefault()
-        e.stopPropagation()
-        window.location.href="/spotify-login"
-    })
-
+if(miniPlayer) {
+    if(spotifyIcon) {
+        spotifyIcon.addEventListener("click",(e)=>{
+            e.preventDefault()
+            e.stopPropagation()
+            miniPlayer.classList.toggle("active")
+        })
+    }
+    if(navPlayerToggle) {
+        navPlayerToggle.addEventListener("click",(e)=>{
+            e.preventDefault()
+            e.stopPropagation()
+            miniPlayer.classList.toggle("active")
+        })
+    }
 }
 
 // ── Click OUTSIDE closes the mini player ──
 document.addEventListener("click",(e)=>{
-    if(!miniPlayer || !spotifyIcon) return
+    if(!miniPlayer) return
     if(!miniPlayer.classList.contains("active")) return
 
-    const clickedInside = miniPlayer.contains(e.target) || spotifyIcon.contains(e.target)
+    const clickedInside = miniPlayer.contains(e.target) || 
+                          (spotifyIcon && spotifyIcon.contains(e.target)) ||
+                          (navPlayerToggle && navPlayerToggle.contains(e.target))
     if(!clickedInside){
         closeMiniPlayer()
     }
 })
+
+// ── Mobile Menu Toggle Logic ──
+const menuToggleBtn = document.getElementById("menuToggleBtn");
+const sidebarNav = document.getElementById("sidebarNav");
+
+if (menuToggleBtn && sidebarNav) {
+    menuToggleBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        sidebarNav.classList.toggle("active");
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!sidebarNav.classList.contains("active")) return;
+        const clickedInside = sidebarNav.contains(e.target) || menuToggleBtn.contains(e.target);
+        if (!clickedInside) {
+            sidebarNav.classList.remove("active");
+        }
+    });
+}
+
 
 
 /* =========================================================
@@ -879,10 +1342,10 @@ if(volumeSlider){
 
         volumeSlider.style.background=`linear-gradient(
             to right,
-            #1db954 0%,
-            #1db954 ${progress}%,
-            rgba(255,255,255,0.25) ${progress}%,
-            rgba(255,255,255,0.25) 100%
+            #ffffff 0%,
+            #ffffff ${progress}%,
+            rgba(255,255,255,0.15) ${progress}%,
+            rgba(255,255,255,0.15) 100%
         )`
 
     })
@@ -947,22 +1410,22 @@ async function sendMessage(){
 
         typing.remove()
 
+        if(data.support_message){
+            addMessage(data.support_message,"bot")
+        }
+
         if(data.command){
             handleMusicCommand(data.command)
-            return
-        }
-
-        if(data.music_query){
-
-            document.getElementById("musicSearch").value=data.music_query
+        } else if(data.music_query){
+            const musicSearchEl = document.getElementById("musicSearch")
+            if(musicSearchEl){
+                musicSearchEl.value=data.music_query
+            }
             searchAndPlay()
-
-            addMessage("🎧 Playing music for you...","bot")
-            return
-
+            if(!data.support_message){
+                addMessage("🎧 Playing music for you...","bot")
+            }
         }
-
-        addMessage(data.support_message,"bot")
 
         if(data.wellbeing_score !== undefined){
 
@@ -1075,6 +1538,8 @@ function handleMusicCommand(command){
 
 function playMoodMusic(mood){
 
+    isAutoPlayingWellbeing = false;
+
     fetch(`/spotify-recommend?mood=${mood}`)
     .then(res=>res.json())
     .then(tracks=>{
@@ -1125,59 +1590,243 @@ function closeEmergency(){
 }
 
 /* =========================================================
-   CURSOR GLOW
+   WHITE ASH / MIST CURSOR PARTICLES
+   Subtle ambient mist following the cursor.
+   Respects prefers-reduced-motion per impeccable guidelines.
 =========================================================*/
 
-const glow=document.querySelector(".cursor-glow")
+(function initAshParticles() {
 
-let mouseX=0
-let mouseY=0
-let currentX=0
-let currentY=0
+    // Respect reduced-motion preference
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
+    if (motionQuery.matches) return
 
-document.addEventListener("mousemove",e=>{
-    mouseX=e.clientX
-    mouseY=e.clientY
-})
+    const canvas = document.getElementById("ashCanvas")
+    if (!canvas) return
 
-function animateGlow(){
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
 
-    if(!glow) return
+    let mouseX = -100
+    let mouseY = -100
+    let particles = []
+    const MAX_PARTICLES = 400
 
-    currentX+=(mouseX-currentX)*0.08
-    currentY+=(mouseY-currentY)*0.08
+    function resize() {
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+    }
 
-    glow.style.left=currentX+"px"
-    glow.style.top=currentY+"px"
+    window.addEventListener("resize", resize)
+    resize()
 
-    requestAnimationFrame(animateGlow)
+    // Pre-populate particles to have mist immediately on load
+    for (let i = 0; i < MAX_PARTICLES * 0.6; i++) {
+        const size = 4 + Math.random() * 8
+        const life = 350 + Math.random() * 250
+        const progress = Math.random()
+        const vx = (Math.random() - 0.5) * 0.4
+        const vy = -0.5 - Math.random() * 0.8
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: vx,
+            vy: vy,
+            speed: Math.hypot(vx, vy),
+            size: size,
+            maxLife: life,
+            life: life * progress,
+            opacity: 0.04 + Math.random() * 0.06,
+            hit: false
+        })
+    }
 
-}
+    const cursorDot = document.getElementById("customCursorDot")
 
-animateGlow()
+    document.addEventListener("mousemove", e => {
+        mouseX = e.clientX
+        mouseY = e.clientY
+        if (cursorDot) {
+            cursorDot.style.left = e.clientX + "px"
+            cursorDot.style.top = e.clientY + "px"
+            cursorDot.style.display = "block"
+        }
+    })
+
+    // Hover scaling for clickable elements
+    document.addEventListener("mouseover", (e) => {
+        const target = e.target;
+        if (!target) return;
+        
+        const isClickable = target.closest("button, a, input[type='submit'], input[type='button'], [role='button'], .cursor-pointer, #spotifyIcon, #avatarLogoutBtn, .iconBtn") || 
+                            (window.getComputedStyle(target).cursor === "pointer");
+        
+        if (isClickable && cursorDot) {
+            cursorDot.classList.add("cursor-hover");
+        }
+    });
+
+    document.addEventListener("mouseout", (e) => {
+        const related = e.relatedTarget;
+        if (cursorDot) {
+            const isRelatedClickable = related && (
+                related.closest("button, a, input[type='submit'], input[type='button'], [role='button'], .cursor-pointer, #spotifyIcon, #avatarLogoutBtn, .iconBtn") ||
+                (window.getComputedStyle(related).cursor === "pointer")
+            );
+            if (!isRelatedClickable) {
+                cursorDot.classList.remove("cursor-hover");
+            }
+        }
+    });
+
+    // Hide particles when cursor leaves window
+    document.addEventListener("mouseleave", () => {
+        mouseX = -100
+        mouseY = -100
+        if (cursorDot) {
+            cursorDot.style.display = "none"
+            cursorDot.classList.remove("cursor-hover");
+        }
+    })
+
+    function spawnParticle() {
+        if (particles.length >= MAX_PARTICLES) return
+
+        const size = 4 + Math.random() * 8
+        const life = 350 + Math.random() * 250
+        const vx = (Math.random() - 0.5) * 0.4
+        const vy = -0.5 - Math.random() * 0.8
+
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: canvas.height + size + 10,
+            vx: vx,
+            vy: vy,
+            speed: Math.hypot(vx, vy),
+            size: size,
+            maxLife: life,
+            life: life,
+            opacity: 0.04 + Math.random() * 0.06,
+            hit: false
+        })
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+        // Spawn multiple mist particles per frame to achieve high density
+        for (let s = 0; s < 3; s++) {
+            spawnParticle()
+        }
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i]
+
+            // Cursor obstacle repulsion physics
+            if (mouseX >= 0 && mouseY >= 0) {
+                const dx = p.x - mouseX
+                const dy = p.y - mouseY
+                const dist = Math.hypot(dx, dy)
+                const repelRadius = 110
+
+                if (dist < repelRadius) {
+                    p.hit = true // Mark particle as having interacted with the obstacle
+
+                    const force = (repelRadius - dist) / repelRadius
+                    const ux = dist > 0 ? dx / dist : (Math.random() > 0.5 ? 1 : -1)
+
+                    // Push particle sideways away from cursor (without vertical speed changes to preserve constant rise speed)
+                    p.vx += ux * force * 0.65
+
+                    // Prevent overlap with cursor core horizontally
+                    const coreRadius = 24
+                    if (dist < coreRadius) {
+                        const pushDist = coreRadius - dist
+                        p.x += ux * pushDist
+                    }
+                }
+            }
+
+            // Post-hit horizontal stabilization
+            if (p.hit) {
+                p.vx *= 0.95 // Keep it rising vertically after the deflection
+            }
+
+            // Friction on horizontal velocity only (do not damp vertical speed to 0 so they rise continuously)
+            p.vx *= 0.985
+
+            // Calculate vy based on vx and p.speed to maintain constant overall speed
+            if (p.speed) {
+                const maxVx = p.speed * 0.95
+                if (p.vx > maxVx) p.vx = maxVx
+                if (p.vx < -maxVx) p.vx = -maxVx
+                p.vy = -Math.sqrt(p.speed * p.speed - p.vx * p.vx)
+            }
+
+            p.x += p.vx
+            p.y += p.vy
+
+            p.life--
+
+            if (p.life <= 0 || p.y < -p.size) {
+                particles.splice(i, 1)
+                continue
+            }
+
+            // Sine wave ease-in-out transparency
+            const progress = p.life / p.maxLife
+            const alpha = p.opacity * Math.sin(progress * Math.PI)
+
+            const color = window.currentMistColor || { r: 255, g: 255, b: 255 };
+            ctx.beginPath()
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+            ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`
+            ctx.fill()
+        }
+
+        // ── Custom white ball cursor glow ──
+        if (mouseX >= 0 && mouseY >= 0) {
+            const glow = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 12)
+            glow.addColorStop(0, "rgba(255, 255, 255, 0.15)")
+            glow.addColorStop(1, "rgba(255, 255, 255, 0)")
+            ctx.beginPath()
+            ctx.arc(mouseX, mouseY, 12, 0, Math.PI * 2)
+            ctx.fillStyle = glow
+            ctx.fill()
+        }
+
+        requestAnimationFrame(render)
+    }
+
+    render()
+
+    // Respond to motion preference changes at runtime
+    motionQuery.addEventListener("change", (e) => {
+        if (e.matches) {
+            particles = []
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+        }
+    })
+
+})()
+
 
 /* =========================================================
    WELCOME
 =========================================================*/
 
-window.addEventListener("load",async()=>{
+async function welcomeUser() {
+    try {
+        const res = await fetch("/welcome");
+        const data = await res.json();
 
-    try{
-
-        const res=await fetch("/welcome")
-        const data=await res.json()
-
-        if(data.message){
-            addMessage(data.message,"bot")
+        if (data.message) {
+            addMessage(data.message, "bot");
         }
-
-    }catch{
-
-        addMessage("Hello! I'm Moodify. How are you feeling today?","bot")
-
+    } catch {
+        addMessage("Hello! I'm Moodify. How are you feeling today?", "bot");
     }
-
-})
+}
 
 function showSpotifyFallback() {
     const fallback = document.getElementById("spotifyFallback");
