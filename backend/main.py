@@ -51,6 +51,7 @@ from database import (
     get_user_sessions,
     create_community_post,
     get_community_posts,
+    clear_chat_history,
 )
 
 import os
@@ -588,6 +589,22 @@ def api_logs(user: dict = Depends(require_auth)):
     except Exception as e:
         print(f"[API Error] /api/logs: {e}")
         return {"logs": []}
+
+
+@app.delete("/api/logs")
+def api_clear_logs(user: dict = Depends(require_auth)):
+    """Clear all chat history logs for the logged-in user."""
+    email = user.get("email")
+    try:
+        clear_chat_history(email)
+        # Also clear in-memory history to reset active chat context
+        from conversation_memory import conversation_history, set_score
+        conversation_history.clear()
+        set_score(None)
+        return {"status": "success"}
+    except Exception as e:
+        print(f"[API Error] DELETE /api/logs: {e}")
+        raise HTTPException(status_code=500, detail="Failed to clear logs")
 
 
 @app.get("/api/sessions")

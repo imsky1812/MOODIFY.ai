@@ -335,6 +335,12 @@ document.addEventListener("DOMContentLoaded", () => {
         // Set double string for infinite seamless horizontal marquee
         ticker.textContent = quoteString + quoteString;
     }
+
+    // Clear Logs button click listener
+    const clearLogsBtn = document.getElementById("clearLogsBtn");
+    if (clearLogsBtn) {
+        clearLogsBtn.addEventListener("click", clearMoodLogs);
+    }
 });
 
 window.addEventListener("beforeunload", () => {
@@ -1920,6 +1926,36 @@ async function loadMoodLogs() {
         container.innerHTML = html;
     } catch (e) {
         console.error("Failed to load mood logs:", e);
+    }
+}
+
+async function clearMoodLogs() {
+    if (!confirm("Are you sure you want to clear your entire chat history and mood logs? This action is permanent and cannot be undone.")) {
+        return;
+    }
+
+    try {
+        const res = await fetch("/api/logs", {
+            method: "DELETE"
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+            showToast("Mood logs and chat history cleared.");
+            
+            // Clear chat display list in UI if present
+            const chatMessagesContainer = document.getElementById("chatMessages");
+            if (chatMessagesContainer) {
+                chatMessagesContainer.innerHTML = "";
+            }
+            
+            // Reload logs view to show empty state
+            loadMoodLogs();
+        } else {
+            showToast("Failed to clear logs.");
+        }
+    } catch (e) {
+        console.error("Failed to clear logs:", e);
+        showToast("Error clearing logs.");
     }
 }
 

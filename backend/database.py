@@ -226,3 +226,11 @@ def get_community_posts(limit: int = 50):
         (limit,),
     ).fetchall()
     return [dict(r) for r in reversed(rows)]
+
+
+def clear_chat_history(user_email: str):
+    """Delete all chat history records for a specific user."""
+    conn = get_connection()
+    conn.execute("DELETE FROM chat_history WHERE user_email = ?", (user_email,))
+    conn.commit()
+
