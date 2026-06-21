@@ -32,6 +32,41 @@ def get_connection() -> sqlite3.Connection:
     return _local.conn
 
 
+# ================= ANONYMOUS ALIAS GENERATION =================
+
+_ADJECTIVES = [
+    "Serene", "Calm", "Gentle", "Quiet", "Peaceful", "Radiant", "Bright",
+    "Steady", "Warm", "Misty", "Crystal", "Silent", "Golden", "Lunar",
+    "Cosmic", "Velvet", "Amber", "Ivory", "Azure", "Ember",
+]
+
+_NOUNS = [
+    "Wave", "Forest", "River", "Cloud", "Star", "Breeze", "Meadow",
+    "Mountain", "Ocean", "Flame", "Petal", "Horizon", "Echo", "Phoenix",
+    "Aurora", "Glacier", "Storm", "Whisper", "Dream", "Tide",
+]
+
+
+def _generate_alias() -> str:
+    """Generate a random anonymous alias like 'Serene Wave'."""
+    return f"{random.choice(_ADJECTIVES)} {random.choice(_NOUNS)}"
+
+
+def _generate_unique_anonymous_name(conn) -> str:
+    """Generate a unique anonymous alias across all users, fallback to numbered suffix on collision."""
+    for _ in range(10):
+        alias = f"{random.choice(_ADJECTIVES)} {random.choice(_NOUNS)}"
+        exists = conn.execute("SELECT 1 FROM users WHERE anonymous_name = ?", (alias,)).fetchone()
+        if not exists:
+            return alias
+    # Fallback to appending a random number to avoid collision
+    while True:
+        alias = f"{random.choice(_ADJECTIVES)} {random.choice(_NOUNS)} {random.randint(100, 9999)}"
+        exists = conn.execute("SELECT 1 FROM users WHERE anonymous_name = ?", (alias,)).fetchone()
+        if not exists:
+            return alias
+
+
 # ================= SCHEMA INIT =================
 
 def init_db():
@@ -42,6 +77,7 @@ def init_db():
             email TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             picture TEXT,
+            anonymous_name TEXT UNIQUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -77,6 +113,20 @@ def init_db():
             FOREIGN KEY(user_email) REFERENCES users(email)
         );
     """)
+    
+    # Migration for existing databases
+    try:
+        conn.execute("ALTER TABLE users ADD COLUMN anonymous_name TEXT;")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_anonymous_name ON users(anonymous_name);")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+
     conn.commit()
     print("[DB] SQLite database initialized at", DB_PATH)
 
@@ -84,12 +134,20 @@ def init_db():
 # ================= USERS =================
 
 def upsert_user(email: str, name: str, picture: str = ""):
-    """Insert or update user profile on login."""
+    """Insert or update user profile on login and assign a unique permanent anonymous name."""
     conn = get_connection()
+    
+    # Check if user already exists and has an anonymous name
+    row = conn.execute("SELECT anonymous_name FROM users WHERE email = ?", (email,)).fetchone()
+    if row and row["anonymous_name"]:
+        anon_name = row["anonymous_name"]
+    else:
+        anon_name = _generate_unique_anonymous_name(conn)
+
     conn.execute(
-        """INSERT INTO users (email, name, picture) VALUES (?, ?, ?)
+        """INSERT INTO users (email, name, picture, anonymous_name) VALUES (?, ?, ?, ?)
            ON CONFLICT(email) DO UPDATE SET name=excluded.name, picture=excluded.picture""",
-        (email, name, picture),
+        (email, name, picture, anon_name),
     )
     conn.commit()
 
@@ -186,28 +244,18 @@ def get_user_sessions(user_email: str, limit: int = 50):
 
 # ================= COMMUNITY =================
 
-_ADJECTIVES = [
-    "Serene", "Calm", "Gentle", "Quiet", "Peaceful", "Radiant", "Bright",
-    "Steady", "Warm", "Misty", "Crystal", "Silent", "Golden", "Lunar",
-    "Cosmic", "Velvet", "Amber", "Ivory", "Azure", "Ember",
-]
-
-_NOUNS = [
-    "Wave", "Forest", "River", "Cloud", "Star", "Breeze", "Meadow",
-    "Mountain", "Ocean", "Flame", "Petal", "Horizon", "Echo", "Phoenix",
-    "Aurora", "Glacier", "Storm", "Whisper", "Dream", "Tide",
-]
-
-
-def _generate_alias() -> str:
-    """Generate a random anonymous alias like 'Serene Wave'."""
-    return f"{random.choice(_ADJECTIVES)} {random.choice(_NOUNS)}"
-
-
 def create_community_post(user_email: str, content: str, mood_tag: str = None):
-    """Create a new anonymous community post."""
-    alias = _generate_alias()
+    """Create a new anonymous community post using pre-assigned user alias and cleaning up old posts."""
     conn = get_connection()
+    
+    # 1. Clean up community posts older than 15 minutes
+    conn.execute("DELETE FROM community_posts WHERE timestamp < datetime('now', '-15 minutes')")
+    conn.commit()
+    
+    # 2. Retrieve user's unique permanent anonymous name
+    row = conn.execute("SELECT anonymous_name FROM users WHERE email = ?", (user_email,)).fetchone()
+    alias = row["anonymous_name"] if (row and row["anonymous_name"]) else "Anonymous"
+    
     conn.execute(
         """INSERT INTO community_posts (user_email, alias, content, mood_tag)
            VALUES (?, ?, ?, ?)""",
@@ -218,8 +266,13 @@ def create_community_post(user_email: str, content: str, mood_tag: str = None):
 
 
 def get_community_posts(limit: int = 50):
-    """Retrieve the latest community posts (public, anonymous)."""
+    """Retrieve the latest community posts (public, anonymous, auto-cleaned up to last 15 minutes)."""
     conn = get_connection()
+    
+    # Clean up community posts older than 15 minutes
+    conn.execute("DELETE FROM community_posts WHERE timestamp < datetime('now', '-15 minutes')")
+    conn.commit()
+    
     rows = conn.execute(
         """SELECT alias, content, mood_tag, timestamp
            FROM community_posts ORDER BY id DESC LIMIT ?""",

@@ -204,7 +204,7 @@
                     What is MOODIFY.ai?
                 </h4>
                 <p>
-                    MOODIFY.ai is a premium emotional wellbeing companion designed to act as your acoustic sanctuary. It leverages advanced facial expressions, voice acoustics, and sentiment reasoning to gauge your current state of mind and dynamically calibrate acoustic therapy using Spotify's library.
+                    MOODIFY.ai is an advanced, multi-modal affective computing sanctuary. By synthesizing real-time facial micro-expressions, vocal acoustics, and deep semantic sentiment reasoning, it establishes a precise profile of your cognitive load and emotional state. The system programmatically orchestrates custom acoustic therapy via Spotify, acting as a real-time neuro-acoustic anchor.
                 </p>
             </div>
             
@@ -215,41 +215,26 @@
                 <h4 class="font-display text-sm font-semibold text-white tracking-wide uppercase text-primary/90">
                     How to use it
                 </h4>
-                <ul class="list-disc list-inside flex flex-col gap-2">
-                    <li><strong class="text-white/90">Authenticate:</strong> Sign in with Google to establish your private wellbeing profile.</li>
-                    <li><strong class="text-white/90">Calibrate:</strong> Enable your camera or microphone, or simply chat to describe your day.</li>
-                    <li><strong class="text-white/90">Acoustic Therapy:</strong> Tap companion triggers to generate dynamic Spotify play recommendations matched to your state.</li>
+                <ul class="list-disc list-inside flex flex-col gap-2.5">
+                    <li><strong class="text-white/90">Authenticate:</strong> Establish a secure, private wellbeing profile using Google Identity Services to persist your longitudinal emotional trends.</li>
+                    <li><strong class="text-white/90">Calibrate:</strong> Disclose your state of mind through textual reflection, verbal expression, or real-time facial stream capture.</li>
+                    <li><strong class="text-white/90">Resonate:</strong> Let the affective model evaluate your valence levels, delivering tailored acoustic triggers designed to guide your heart rate and cognitive patterns back to baseline tranquility.</li>
                 </ul>
             </div>
 
             <hr class="border-white/5" />
 
-            <!-- Section: Mental Health & Music -->
+            <!-- Section: Why we built this -->
             <div class="flex flex-col gap-3">
                 <h4 class="font-display text-sm font-semibold text-white tracking-wide uppercase text-primary/90">
-                    Mental Health & Music Healing
+                    Why we built this
                 </h4>
                 <p>
-                    Music has a direct neurobiological impact on mental health. Sound waves stimulate the autonomic nervous system, regulating cortisol (stress hormone) levels and increasing dopamine production.
+                    In an era dominated by hyper-connectivity, cognitive overload, and constant stimulation, authentic spaces for emotional recalibration have become exceedingly rare. We engineered MOODIFY.ai to serve as an intelligent digital sanctuary—a bridge connecting your immediate affective state with responsive acoustic feedback.
                 </p>
-                <div class="flex flex-col gap-2 bg-white/5 border border-white/5 rounded-xl p-4 mt-1">
-                    <div class="flex items-start gap-2.5">
-                        <span class="material-symbols-outlined text-[16px] text-white/80 mt-0.5">favorite</span>
-                        <div>
-                            <strong class="text-white/90 block text-xs">Heart Rate Entrainment</strong>
-                            <span class="text-xs text-on-surface-variant/75">Slow tempo tracks shift brainwave activity from Beta to Alpha/Theta states, reducing heart rate and blood pressure.</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex flex-col gap-2 bg-white/5 border border-white/5 rounded-xl p-4">
-                    <div class="flex items-start gap-2.5">
-                        <span class="material-symbols-outlined text-[16px] text-white/80 mt-0.5">psychology</span>
-                        <div>
-                            <strong class="text-white/90 block text-xs">Acoustic Calibration</strong>
-                            <span class="text-xs text-on-surface-variant/75">By matching your current mood resonance and gradually moving the acoustic structure toward stability, audio acts as a therapeutic anchor.</span>
-                        </div>
-                    </div>
-                </div>
+                <p>
+                    By transitioning music from a medium of passive entertainment to a tool for active neural regulation and self-reflection, we aim to help you break through mental fatigue, face honest internal truths, and steadily cultivate inner stability.
+                </p>
             </div>
         </div>
     </div>
@@ -312,8 +297,8 @@
                         <button id="letsStartBtn" class="px-8 py-3.5 bg-white text-black font-semibold text-xs rounded-full hover:bg-white/90 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-white/5 flex items-center gap-2 cursor-pointer border border-white">
                             Let's Start <span class="material-symbols-outlined text-[16px] font-bold">arrow_forward</span>
                         </button>
-                        <button id="heroAboutBtn" class="px-8 py-3.5 border border-white/10 hover:border-white/25 rounded-full text-xs font-semibold text-on-surface hover:bg-white/5 transition-all cursor-pointer">
-                            About
+                        <button id="contactUsBtn" class="px-8 py-3.5 border border-white/10 hover:border-white/25 rounded-full text-xs font-semibold text-on-surface hover:bg-white/5 transition-all cursor-pointer">
+                            Contact Us
                         </button>
                     </div>
                     <!-- Status message under CTA -->
@@ -391,10 +376,10 @@
                 <span class="material-symbols-outlined text-[18px]">music_note</span>
                 Player Panel
             </a>
-            <a id="sidebarSpotifyLink" href="/spotify-login"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm transition-all duration-200">
-                <span class="material-symbols-outlined text-[18px]">settings_input_hdmi</span>
-                <span id="sidebarSpotifyText">Connect Spotify</span>
+            <a id="navAboutBtn"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm transition-all duration-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">info</span>
+                About
             </a>
         </div>
     </nav>

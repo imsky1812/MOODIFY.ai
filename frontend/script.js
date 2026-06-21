@@ -278,13 +278,31 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // About Sliding Panel Listeners
-    const heroAboutBtn = document.getElementById("heroAboutBtn");
+    // Contact Us and About Sliding Panel Listeners
+    const contactUsBtn = document.getElementById("contactUsBtn");
+    const navAboutBtn = document.getElementById("navAboutBtn");
     const aboutPanel = document.getElementById("aboutPanel");
     const closeAboutBtn = document.getElementById("closeAboutBtn");
 
-    if (heroAboutBtn && aboutPanel) {
-        heroAboutBtn.addEventListener("click", (e) => {
+    if (contactUsBtn) {
+        contactUsBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            navigator.clipboard.writeText("sarveshkyadav18@gmail.com").then(() => {
+                const originalText = contactUsBtn.textContent;
+                contactUsBtn.innerHTML = `Email Copied! <span class="material-symbols-outlined text-[14px]">done</span>`;
+                showToast("Admin email copied to clipboard!");
+                setTimeout(() => {
+                    contactUsBtn.textContent = "Contact Us";
+                }, 2000);
+            }).catch(err => {
+                console.error("Failed to copy email:", err);
+                showToast("sarveshkyadav18@gmail.com");
+            });
+        });
+    }
+
+    if (navAboutBtn && aboutPanel) {
+        navAboutBtn.addEventListener("click", (e) => {
             e.preventDefault();
             aboutPanel.classList.remove("translate-x-full");
         });
@@ -299,7 +317,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.addEventListener("click", (e) => {
         if (aboutPanel && !aboutPanel.classList.contains("translate-x-full")) {
-            if (!aboutPanel.contains(e.target) && e.target !== heroAboutBtn && !heroAboutBtn.contains(e.target)) {
+            const isAboutTrigger = (navAboutBtn && (navAboutBtn.contains(e.target) || e.target === navAboutBtn));
+            if (!aboutPanel.contains(e.target) && !isAboutTrigger) {
                 aboutPanel.classList.add("translate-x-full");
             }
         }
