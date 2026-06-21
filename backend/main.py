@@ -215,19 +215,16 @@ def analyze_text(data: TextInput, user: dict = Depends(require_auth)):
             "risk_level": "LOW",
         }
 
-    # Store user message (persisted to DB)
-    add_user_message(user_text, user_email=user_email)
-
-    # Call unified agent
+    # 1. Fetch previous history (excluding current turn)
     history = get_history(user_email=user_email)
-    # history includes current user message, so pass history[:-1] as prior turns
-    response = generate_agent_response(user_text, history[:-1])
 
-    # Store assistant's message in memory (persisted to DB)
-    reply = response.get("reply", "")
-    add_assistant_message(reply, user_email=user_email)
+    # 2. Call unified agent
+    response = generate_agent_response(user_text, history)
 
-    # Wellbeing calculation & smoothing
+    # 3. Detect user's text emotion
+    user_emotion = detect_text_emotion(user_text)
+
+    # 4. Wellbeing calculation & smoothing
     score = response.get("wellbeing_score")
     previous_score = get_score()
 
@@ -240,7 +237,14 @@ def analyze_text(data: TextInput, user: dict = Depends(require_auth)):
             set_score(smooth_score)
             wellbeing = smooth_score
     else:
-        wellbeing = previous_score or "Calculating..."
+        wellbeing = previous_score or 50
+
+    # 5. Store user message in memory & DB with wellbeing score and detected emotion
+    add_user_message(user_text, user_email=user_email, wellbeing_score=wellbeing, detected_emotion=user_emotion)
+
+    # 6. Store assistant's message in memory & DB
+    reply = response.get("reply", "")
+    add_assistant_message(reply, user_email=user_email)
 
     # Extract risk level and commands
     risk = response.get("risk_level", "LOW")
@@ -347,13 +351,34 @@ async def analyze_audio(audio: UploadFile = File(...), user: dict = Depends(requ
         command = None
         music_query = None
         if text:
-            # Store user message (persisted to DB)
-            add_user_message(text, user_email=user_email)
-            
-            # Call unified agent
+            # Fetch previous history (excluding current turn)
             history = get_history(user_email=user_email)
-            response = generate_agent_response(text, history[:-1])
+
+            # Call unified agent
+            response = generate_agent_response(text, history)
             
+            # Detect user's text emotion
+            user_emotion = detect_text_emotion(text)
+
+            # Wellbeing calculation & smoothing
+            score = response.get("wellbeing_score")
+            previous_score = get_score()
+
+            if score is not None:
+                if previous_score is None:
+                    set_score(score)
+                    wellbeing = score
+                else:
+                    smooth_score = int(previous_score * 0.7 + score * 0.3)
+                    set_score(smooth_score)
+                    wellbeing = smooth_score
+            else:
+                wellbeing = previous_score or 50
+
+            # Store user message in memory & DB with wellbeing score and detected emotion
+            add_user_message(text, user_email=user_email, wellbeing_score=wellbeing, detected_emotion=user_emotion)
+            
+            # Store assistant's message in memory & DB
             reply = response.get("reply", "")
             add_assistant_message(reply, user_email=user_email)
             
