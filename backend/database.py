@@ -14,7 +14,7 @@ import random
 # ================= DATABASE PATH =================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "..", "moodify.db")
+DB_PATH = os.getenv("DATABASE_PATH", os.path.join(BASE_DIR, "..", "moodify.db"))
 
 # Thread-local storage for SQLite connections (one per thread)
 _local = threading.local()

@@ -106,7 +106,7 @@ def log_user_login(email: str, name: str, ip: str):
     location = get_location_from_ip(ip)
     
     # 1. Local CSV Backup
-    csv_file_path = os.path.join(BASE_DIR, "..", "user_logins.csv")
+    csv_file_path = os.getenv("LOGINS_CSV_PATH", os.path.join(BASE_DIR, "..", "user_logins.csv"))
     file_exists = os.path.exists(csv_file_path)
     try:
         with open(csv_file_path, mode="a", newline="", encoding="utf-8") as f:
