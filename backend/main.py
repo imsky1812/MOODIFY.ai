@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request, UploadFile, File, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
+from typing import Optional
 from starlette.middleware.sessions import SessionMiddleware
 from datetime import datetime
 import requests
@@ -520,12 +521,12 @@ def spotify_search(query: str, user: dict = Depends(require_auth)):
 class SessionInput(BaseModel):
     session_type: str
     duration_seconds: int
-    wellbeing_before: int = None
-    wellbeing_after: int = None
+    wellbeing_before: Optional[int] = None
+    wellbeing_after: Optional[int] = None
 
 class CommunityPostInput(BaseModel):
     content: str
-    mood_tag: str = None
+    mood_tag: Optional[str] = None
 
 
 @app.get("/api/history")

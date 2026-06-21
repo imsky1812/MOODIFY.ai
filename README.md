@@ -58,6 +58,7 @@ The system blends **AI psychology principles with music recommendation** to crea
 ### 💬 AI Emotional Companion
 
 * Natural conversation with **Groq LLM (Llama-3.3-70B)**
+* **Warrior-Poet / Brutally Honest Persona**: MOODIFY is not a generic, overly polite AI. It behaves like a battle-scarred mentor—brutally honest, straightforward, and critical of excuses, but deeply caring and committed to guiding you back to strength.
 * Supports **English, Hindi, and Hinglish**
 * Emotion-aware responses calibrated to your mood
 * Crisis detection with supportive emergency interventions
