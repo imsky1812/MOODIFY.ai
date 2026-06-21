@@ -604,3 +604,32 @@
 .score-badge.low { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
 .score-badge.mid { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.2); }
 .score-badge.high { background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.2); }
+
+/* ===== SPOTIFY GLOWING MUSIC THERAPY TEXT ===== */
+.spotify-glow-text {
+    background: linear-gradient(135deg, #1DB954 0%, #1ED760 50%, #1DB954 100%) !important;
+    background-size: 200% auto !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    text-fill-color: transparent !important;
+    animation: spotifyGlowPulse 3s ease-in-out infinite, spotifyShine 6s linear infinite !important;
+    filter: drop-shadow(0 0 8px rgba(29, 185, 84, 0.5)) drop-shadow(0 0 20px rgba(30, 215, 96, 0.3)) !important;
+    transition: filter 1.5s ease-in-out, background 1.5s ease-in-out !important;
+}
+
+@keyframes spotifyGlowPulse {
+    0%, 100% {
+        filter: drop-shadow(0 0 6px rgba(29, 185, 84, 0.4)) drop-shadow(0 0 15px rgba(30, 215, 96, 0.2));
+    }
+    50% {
+        filter: drop-shadow(0 0 14px rgba(29, 185, 84, 0.8)) drop-shadow(0 0 28px rgba(30, 215, 96, 0.45));
+    }
+}
+
+@keyframes spotifyShine {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+

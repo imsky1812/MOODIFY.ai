@@ -134,6 +134,8 @@ function updateAuthUI(user) {
     const authContainer = document.getElementById("googleHeaderBtn");
     if (!authContainer) return;
     
+    const musicTherapyText = document.getElementById("musicTherapyText");
+    
     if (user) {
         authContainer.innerHTML = `
             <div class="flex items-center gap-2 bg-surface-container/60 border border-white/5 px-4 py-1.5 rounded-full text-xs text-on-surface">
@@ -152,6 +154,12 @@ function updateAuthUI(user) {
                 avatarBtn.innerHTML = `<span class="material-symbols-outlined text-green-400">person</span>`;
             }
         }
+
+        // Apply Spotify green glowing gradient
+        if (musicTherapyText) {
+            musicTherapyText.classList.remove("from-white", "via-white/80", "to-white/40");
+            musicTherapyText.classList.add("spotify-glow-text");
+        }
     } else {
         authContainer.innerHTML = `
             <div id="googleBtnContainer" class="scale-90 hover:scale-95 transition-transform duration-200"></div>
@@ -162,6 +170,12 @@ function updateAuthUI(user) {
         if (avatarBtn) {
             avatarBtn.title = "Sign Out from Moodify";
             avatarBtn.innerHTML = `<span class="material-symbols-outlined text-on-surface-variant/80">person</span>`;
+        }
+
+        // Restore default silver-white gradient
+        if (musicTherapyText) {
+            musicTherapyText.classList.remove("spotify-glow-text");
+            musicTherapyText.classList.add("from-white", "via-white/80", "to-white/40");
         }
     }
 }

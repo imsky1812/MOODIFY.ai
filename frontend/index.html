@@ -182,32 +182,42 @@
     <canvas id="ashCanvas" class="fixed inset-0 w-full h-full pointer-events-none" style="z-index:100;"></canvas>
 
     <!-- Custom White Ball Cursor Dot with mix-blend-difference color inversion -->
-    <div id="customCursorDot" class="fixed w-2.5 h-2.5 rounded-full pointer-events-none select-none z-[1000000] bg-white -translate-x-1/2 -translate-y-1/2 hidden md:block" style="left: -100px; top: -100px; mix-blend-mode: difference; opacity: 0.85;"></div>
+    <div id="customCursorDot"
+        class="fixed w-2.5 h-2.5 rounded-full pointer-events-none select-none z-[1000000] bg-white -translate-x-1/2 -translate-y-1/2 hidden md:block"
+        style="left: -100px; top: -100px; mix-blend-mode: difference; opacity: 0.85;"></div>
 
     <!-- About Sliding Panel -->
-    <div id="aboutPanel" class="fixed right-0 top-0 bottom-0 w-full sm:w-[480px] bg-background/80 backdrop-blur-2xl border-l border-white/10 z-[100] translate-x-full transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) flex flex-col shadow-2xl m-0 rounded-l-3xl overflow-hidden">
+    <div id="aboutPanel"
+        class="fixed right-0 top-0 bottom-0 w-full sm:w-[480px] bg-background/80 backdrop-blur-2xl border-l border-white/10 z-[100] translate-x-full transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) flex flex-col shadow-2xl m-0 rounded-l-3xl overflow-hidden">
         <!-- Panel Header -->
         <div class="h-20 flex items-center justify-between px-8 border-b border-white/5 bg-surface-container/40">
             <h3 class="font-display text-lg font-bold text-white tracking-tight flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary/80">info</span>
                 About MOODIFY.ai
             </h3>
-            <button id="closeAboutBtn" class="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white transition-all cursor-pointer" title="Close About Section">
+            <button id="closeAboutBtn"
+                class="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white transition-all cursor-pointer"
+                title="Close About Section">
                 <span class="material-symbols-outlined text-[18px]">close</span>
             </button>
         </div>
         <!-- Panel Body -->
-        <div class="flex-1 overflow-y-auto p-8 flex flex-col gap-6 custom-scrollbar text-sm text-on-surface-variant/90 leading-relaxed bg-surface/30">
+        <div
+            class="flex-1 overflow-y-auto p-8 flex flex-col gap-6 custom-scrollbar text-sm text-on-surface-variant/90 leading-relaxed bg-surface/30">
             <!-- Section: What is it -->
             <div class="flex flex-col gap-3">
-                <h4 class="font-display text-sm font-semibold text-white tracking-wide uppercase text-primary/90 flex items-center gap-1.5">
+                <h4
+                    class="font-display text-sm font-semibold text-white tracking-wide uppercase text-primary/90 flex items-center gap-1.5">
                     What is MOODIFY.ai?
                 </h4>
                 <p>
-                    MOODIFY.ai is an advanced, multi-modal affective computing sanctuary. By synthesizing real-time facial micro-expressions, vocal acoustics, and deep semantic sentiment reasoning, it establishes a precise profile of your cognitive load and emotional state. The system programmatically orchestrates custom acoustic therapy via Spotify, acting as a real-time neuro-acoustic anchor.
+                    MOODIFY.ai is an advanced, multi-modal affective computing sanctuary. By synthesizing real-time
+                    facial micro-expressions, vocal acoustics, and deep semantic sentiment reasoning, it establishes a
+                    precise profile of your cognitive load and emotional state. The system programmatically orchestrates
+                    custom acoustic therapy via Spotify, acting as a real-time neuro-acoustic anchor.
                 </p>
             </div>
-            
+
             <hr class="border-white/5" />
 
             <!-- Section: How to use -->
@@ -216,9 +226,13 @@
                     How to use it
                 </h4>
                 <ul class="list-disc list-inside flex flex-col gap-2.5">
-                    <li><strong class="text-white/90">Authenticate:</strong> Establish a secure, private wellbeing profile using Google Identity Services to persist your longitudinal emotional trends.</li>
-                    <li><strong class="text-white/90">Calibrate:</strong> Disclose your state of mind through textual reflection, verbal expression, or real-time facial stream capture.</li>
-                    <li><strong class="text-white/90">Resonate:</strong> Let the affective model evaluate your valence levels, delivering tailored acoustic triggers designed to guide your heart rate and cognitive patterns back to baseline tranquility.</li>
+                    <li><strong class="text-white/90">Authenticate:</strong> Establish a secure, private wellbeing
+                        profile using Google Identity Services to persist your longitudinal emotional trends.</li>
+                    <li><strong class="text-white/90">Calibrate:</strong> Disclose your state of mind through textual
+                        reflection, verbal expression, or real-time facial stream capture.</li>
+                    <li><strong class="text-white/90">Resonate:</strong> Let the affective model evaluate your valence
+                        levels, delivering tailored acoustic triggers designed to guide your heart rate and cognitive
+                        patterns back to baseline tranquility.</li>
                 </ul>
             </div>
 
@@ -230,17 +244,23 @@
                     Why we built this
                 </h4>
                 <p>
-                    In an era dominated by hyper-connectivity, cognitive overload, and constant stimulation, authentic spaces for emotional recalibration have become exceedingly rare. We engineered MOODIFY.ai to serve as an intelligent digital sanctuary—a bridge connecting your immediate affective state with responsive acoustic feedback.
+                    In an era dominated by hyper-connectivity, cognitive overload, and constant stimulation, authentic
+                    spaces for emotional recalibration have become exceedingly rare. We engineered MOODIFY.ai to serve
+                    as an intelligent digital sanctuary—a bridge connecting your immediate affective state with
+                    responsive acoustic feedback.
                 </p>
                 <p>
-                    By transitioning music from a medium of passive entertainment to a tool for active neural regulation and self-reflection, we aim to help you break through mental fatigue, face honest internal truths, and steadily cultivate inner stability.
+                    By transitioning music from a medium of passive entertainment to a tool for active neural regulation
+                    and self-reflection, we aim to help you break through mental fatigue, face honest internal truths,
+                    and steadily cultivate inner stability.
                 </p>
             </div>
         </div>
     </div>
 
     <!-- ================= LANDING PAGE LOCK SCREEN ================= -->
-    <div id="landingPage" class="fixed inset-0 z-50 flex flex-col bg-background/90 backdrop-blur-2xl transition-all duration-[900ms] cubic-bezier(0.16, 1, 0.3, 1) overflow-hidden border border-white/5 m-4 rounded-3xl shadow-2xl">
+    <div id="landingPage"
+        class="fixed inset-0 z-50 flex flex-col bg-background/90 backdrop-blur-2xl transition-all duration-[900ms] cubic-bezier(0.16, 1, 0.3, 1) overflow-hidden border border-white/5 m-4 rounded-3xl shadow-2xl">
         <!-- Background organic lines mimicking the reference UI -->
         <div class="absolute inset-0 z-0 pointer-events-none opacity-40">
             <svg class="w-full h-full stroke-white/5 stroke-[0.5] fill-none" xmlns="http://www.w3.org/2000/svg">
@@ -260,8 +280,10 @@
             </div>
 
             <!-- Top Center Quotes Ticker -->
-            <div class="hidden md:flex items-center max-w-[320px] lg:max-w-[480px] w-full overflow-hidden relative ticker-wrap h-8 bg-surface-container/30 border border-white/5 px-4 rounded-full backdrop-blur-md">
-                <div id="headerQuotesTicker" class="ticker-content text-[11px] font-medium text-on-surface-variant/80 tracking-wide">
+            <div
+                class="hidden md:flex items-center max-w-[320px] lg:max-w-[480px] w-full overflow-hidden relative ticker-wrap h-8 bg-surface-container/30 border border-white/5 px-4 rounded-full backdrop-blur-md">
+                <div id="headerQuotesTicker"
+                    class="ticker-content text-[11px] font-medium text-on-surface-variant/80 tracking-wide">
                     <!-- Dynamic Quotes Joined by // -->
                 </div>
             </div>
@@ -278,32 +300,41 @@
             <!-- CENTER HERO TEXT -->
             <div class="text-center max-w-2xl flex flex-col items-center gap-8">
                 <!-- Lock Icon Indicator -->
-                <div class="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-white/5 mb-2 shadow-inner hover:border-white/20 transition-all cursor-pointer" onclick="showToast('Verify identity via Google Auth in the header to enter')">
+                <div class="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-white/5 mb-2 shadow-inner hover:border-white/20 transition-all cursor-pointer"
+                    onclick="showToast('Verify identity via Google Auth in the header to enter')">
                     <span id="lockStatusIcon" class="material-symbols-outlined text-[20px] text-white">lock</span>
                 </div>
 
                 <div class="flex flex-col gap-4">
-                    <h2 class="font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
-                        Elevate Your Mind with <span class="bg-gradient-to-r from-white via-white/80 to-white/40 bg-clip-text text-transparent">Music Therapy</span>
+                    <h2
+                        class="font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
+                        Elevate Your Mind with <span id="musicTherapyText"
+                            class="bg-gradient-to-r from-white via-white/80 to-white/40 bg-clip-text text-transparent transition-all duration-[1500ms]">Music
+                            Therapy</span>
                     </h2>
                     <p class="text-sm text-on-surface-variant/80 font-body leading-relaxed max-w-lg mx-auto">
-                        Experience an intelligent companion that parses your feelings, maps your emotional state, and calibrates acoustic healing in real-time.
+                        Experience an intelligent companion that parses your feelings, maps your emotional state, and
+                        calibrates acoustic healing in real-time.
                     </p>
                 </div>
 
                 <!-- CTA Button Cluster -->
                 <div class="flex flex-col items-center gap-2 mt-2">
                     <div class="flex items-center gap-4">
-                        <button id="letsStartBtn" class="px-8 py-3.5 bg-white text-black font-semibold text-xs rounded-full hover:bg-white/90 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-white/5 flex items-center gap-2 cursor-pointer border border-white">
-                            Let's Start <span class="material-symbols-outlined text-[16px] font-bold">arrow_forward</span>
+                        <button id="letsStartBtn"
+                            class="px-8 py-3.5 bg-white text-black font-semibold text-xs rounded-full hover:bg-white/90 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-white/5 flex items-center gap-2 cursor-pointer border border-white">
+                            Let's Start <span
+                                class="material-symbols-outlined text-[16px] font-bold">arrow_forward</span>
                         </button>
-                        <button id="contactUsBtn" class="px-8 py-3.5 border border-white/10 hover:border-white/25 rounded-full text-xs font-semibold text-on-surface hover:bg-white/5 transition-all cursor-pointer">
+                        <button id="contactUsBtn"
+                            class="px-8 py-3.5 border border-white/10 hover:border-white/25 rounded-full text-xs font-semibold text-on-surface hover:bg-white/5 transition-all cursor-pointer">
                             Contact Us
                         </button>
                     </div>
                     <!-- Status message under CTA -->
-                    <p id="authPromptMsg" class="text-[10px] text-on-surface-variant/60 uppercase tracking-widest mt-2 font-bold font-label">
-                        Please Sign In in the header first
+                    <p id="authPromptMsg"
+                        class="text-[10px] text-on-surface-variant/60 uppercase tracking-widest mt-2 font-bold font-label">
+                        Please Sign In using your Google account in the header first
                     </p>
                 </div>
             </div>
@@ -311,16 +342,20 @@
         </div>
 
         <!-- Footer -->
-        <footer class="h-20 w-full flex items-center justify-between px-8 z-10 border-t border-white/5 text-xs text-on-surface-variant/50">
+        <footer
+            class="h-20 w-full flex items-center justify-between px-8 z-10 border-t border-white/5 text-xs text-on-surface-variant/50">
             <!-- Left scroll/spacebar instruction -->
             <div class="flex items-center gap-3">
                 <span class="material-symbols-outlined text-[16px] text-primary/80">keyboard</span>
-                <span id="footerPromptText" class="font-label tracking-wide uppercase text-[10px] font-semibold text-on-surface-variant/60">Press Spacebar or Click Let's Start</span>
+                <span id="footerPromptText"
+                    class="font-label tracking-wide uppercase text-[10px] font-semibold text-on-surface-variant/60">Press
+                    Spacebar or Click Let's Start</span>
             </div>
 
             <!-- Right Sky Horizons -->
-            <div class="font-bold tracking-widest uppercase text-[10px] text-on-surface-variant/60" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
-                MADE WITH ❤️ [SKY]
+            <div class="font-bold tracking-widest uppercase text-[10px] text-on-surface-variant/60"
+                style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+                <3 --> ❤️
             </div>
         </footer>
     </div>
@@ -337,23 +372,28 @@
 
         <!-- Navigation Menu Links -->
         <div class="flex flex-col gap-1 px-1">
-            <a data-tab="chat" class="nav-tab active flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary font-body text-sm font-semibold transition-all duration-200 cursor-pointer">
+            <a data-tab="chat"
+                class="nav-tab active flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary font-body text-sm font-semibold transition-all duration-200 cursor-pointer">
                 <span class="material-symbols-outlined text-[20px]">chat</span>
                 Companion Chat
             </a>
-            <a data-tab="logs" class="nav-tab flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
+            <a data-tab="logs"
+                class="nav-tab flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
                 <span class="material-symbols-outlined text-[20px]">mood</span>
                 Mood Log
             </a>
-            <a data-tab="analytics" class="nav-tab flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
+            <a data-tab="analytics"
+                class="nav-tab flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
                 <span class="material-symbols-outlined text-[20px]">insights</span>
                 Analytics
             </a>
-            <a data-tab="library" class="nav-tab flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
+            <a data-tab="library"
+                class="nav-tab flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
                 <span class="material-symbols-outlined text-[20px]">auto_stories</span>
                 Library
             </a>
-            <a data-tab="community" class="nav-tab flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
+            <a data-tab="community"
+                class="nav-tab flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-variant/40 hover:text-on-surface font-body text-sm font-medium transition-all duration-200 cursor-pointer">
                 <span class="material-symbols-outlined text-[20px]">group</span>
                 Community
             </a>
@@ -428,7 +468,8 @@
         <div class="flex-1 flex overflow-hidden md:p-6 p-4 md:gap-6 gap-4 relative">
 
             <!-- ====== VIEW: CHAT (default) ====== -->
-            <section id="chatView" data-view="chat" class="view-panel flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
+            <section id="chatView" data-view="chat"
+                class="view-panel flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
                 <!-- Chat Logs messages -->
                 <div id="chat" class="flex-1 overflow-y-auto p-6 flex flex-col gap-6 custom-scrollbar">
                     <!-- Empty Landing State -->
@@ -467,36 +508,43 @@
             </section>
 
             <!-- ====== VIEW: MOOD LOG ====== -->
-            <section id="logsView" data-view="logs" class="view-panel hidden flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
+            <section id="logsView" data-view="logs"
+                class="view-panel hidden flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
                 <div class="p-6 border-b border-white/5 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <span class="material-symbols-outlined text-primary text-[22px]">mood</span>
                         <h2 class="font-display text-lg font-bold text-white tracking-tight">Mood Log</h2>
                     </div>
-                    <button id="clearLogsBtn" class="px-3 py-1 text-[10px] font-bold rounded-full border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all flex items-center gap-1">
+                    <button id="clearLogsBtn"
+                        class="px-3 py-1 text-[10px] font-bold rounded-full border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all flex items-center gap-1">
                         <span class="material-symbols-outlined text-[12px]">delete</span>
                         Clear Logs
                     </button>
                 </div>
                 <div id="logsContent" class="flex-1 overflow-y-auto p-6 custom-scrollbar">
                     <div class="logs-empty text-center py-16 text-on-surface-variant/60">
-                        <span class="material-symbols-outlined text-[48px] mb-3 block opacity-30">sentiment_neutral</span>
+                        <span
+                            class="material-symbols-outlined text-[48px] mb-3 block opacity-30">sentiment_neutral</span>
                         <p class="text-sm">Start chatting to build your mood history.</p>
                     </div>
                 </div>
             </section>
 
             <!-- ====== VIEW: ANALYTICS ====== -->
-            <section id="analyticsView" data-view="analytics" class="view-panel hidden flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
+            <section id="analyticsView" data-view="analytics"
+                class="view-panel hidden flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
                 <div class="p-6 border-b border-white/5 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <span class="material-symbols-outlined text-primary text-[22px]">insights</span>
                         <h2 class="font-display text-lg font-bold text-white tracking-tight">Wellbeing Analytics</h2>
                     </div>
                     <div class="flex gap-2">
-                        <button data-days="7" class="analytics-range-btn px-3 py-1 text-[10px] font-bold rounded-full border border-white/10 text-on-surface-variant hover:bg-white/10 transition-all">7D</button>
-                        <button data-days="14" class="analytics-range-btn px-3 py-1 text-[10px] font-bold rounded-full border border-white/10 text-on-surface-variant hover:bg-white/10 transition-all">14D</button>
-                        <button data-days="30" class="analytics-range-btn active px-3 py-1 text-[10px] font-bold rounded-full border border-primary/40 text-primary bg-primary/10 transition-all">30D</button>
+                        <button data-days="7"
+                            class="analytics-range-btn px-3 py-1 text-[10px] font-bold rounded-full border border-white/10 text-on-surface-variant hover:bg-white/10 transition-all">7D</button>
+                        <button data-days="14"
+                            class="analytics-range-btn px-3 py-1 text-[10px] font-bold rounded-full border border-white/10 text-on-surface-variant hover:bg-white/10 transition-all">14D</button>
+                        <button data-days="30"
+                            class="analytics-range-btn active px-3 py-1 text-[10px] font-bold rounded-full border border-primary/40 text-primary bg-primary/10 transition-all">30D</button>
                     </div>
                 </div>
                 <div class="flex-1 overflow-y-auto p-6 custom-scrollbar flex flex-col gap-6">
@@ -507,15 +555,19 @@
                     <!-- Stats Summary -->
                     <div id="analyticsStats" class="grid grid-cols-3 gap-3">
                         <div class="glass-panel rounded-xl p-4 text-center border border-white/5">
-                            <span class="block text-[9px] uppercase tracking-wider text-on-surface-variant font-label mb-1">Avg Score</span>
+                            <span
+                                class="block text-[9px] uppercase tracking-wider text-on-surface-variant font-label mb-1">Avg
+                                Score</span>
                             <span id="statAvgScore" class="text-xl font-bold text-primary">--</span>
                         </div>
                         <div class="glass-panel rounded-xl p-4 text-center border border-white/5">
-                            <span class="block text-[9px] uppercase tracking-wider text-on-surface-variant font-label mb-1">Messages</span>
+                            <span
+                                class="block text-[9px] uppercase tracking-wider text-on-surface-variant font-label mb-1">Messages</span>
                             <span id="statTotalMsgs" class="text-xl font-bold text-white">--</span>
                         </div>
                         <div class="glass-panel rounded-xl p-4 text-center border border-white/5">
-                            <span class="block text-[9px] uppercase tracking-wider text-on-surface-variant font-label mb-1">Trend</span>
+                            <span
+                                class="block text-[9px] uppercase tracking-wider text-on-surface-variant font-label mb-1">Trend</span>
                             <span id="statTrend" class="text-xl font-bold text-green-400">--</span>
                         </div>
                     </div>
@@ -523,7 +575,8 @@
             </section>
 
             <!-- ====== VIEW: LIBRARY ====== -->
-            <section id="libraryView" data-view="library" class="view-panel hidden flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
+            <section id="libraryView" data-view="library"
+                class="view-panel hidden flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
                 <div class="p-6 border-b border-white/5 flex items-center gap-3">
                     <span class="material-symbols-outlined text-primary text-[22px]">auto_stories</span>
                     <h2 class="font-display text-lg font-bold text-white tracking-tight">Therapy Library</h2>
@@ -536,7 +589,8 @@
             </section>
 
             <!-- ====== VIEW: COMMUNITY ====== -->
-            <section id="communityView" data-view="community" class="view-panel hidden flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
+            <section id="communityView" data-view="community"
+                class="view-panel hidden flex-1 flex flex-col glass-panel rounded-2xl overflow-hidden border-outline-variant/10 shadow-2xl relative">
                 <div class="p-6 border-b border-white/5 flex items-center gap-3">
                     <span class="material-symbols-outlined text-primary text-[22px]">group</span>
                     <h2 class="font-display text-lg font-bold text-white tracking-tight">Wellness Community</h2>
@@ -547,7 +601,8 @@
                 <!-- Community Post Input -->
                 <div class="p-4 border-t border-white/5 bg-surface-dim/40 backdrop-blur-md">
                     <div class="flex items-center gap-3">
-                        <select id="communityMoodTag" class="bg-surface-container-lowest border border-white/5 rounded-full px-3 py-2 text-xs text-on-surface-variant outline-none focus:border-primary/30 transition-colors">
+                        <select id="communityMoodTag"
+                            class="bg-surface-container-lowest border border-white/5 rounded-full px-3 py-2 text-xs text-on-surface-variant outline-none focus:border-primary/30 transition-colors">
                             <option value="">Mood tag</option>
                             <option value="happy">😊 Happy</option>
                             <option value="calm">😌 Calm</option>
@@ -561,7 +616,8 @@
                             placeholder="Share an anonymous reflection..." type="text" autocomplete="off" />
                         <button id="communityPostBtn"
                             class="w-10 h-10 rounded-full bg-primary text-on-primary hover:bg-primary-container transition-all flex items-center justify-center shadow-md shadow-primary/20">
-                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">send</span>
+                            <span class="material-symbols-outlined text-[20px]"
+                                style="font-variation-settings: 'FILL' 1;">send</span>
                         </button>
                     </div>
                 </div>
@@ -763,18 +819,24 @@
     <!-- ================= BREATHING SESSION OVERLAY ================= -->
     <div id="breathingOverlay" class="breathing-overlay hidden">
         <div class="breathing-box">
-            <button id="closeBreathingBtn" class="absolute top-5 right-5 w-8 h-8 rounded-full border border-white/10 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white transition-all cursor-pointer z-10">
+            <button id="closeBreathingBtn"
+                class="absolute top-5 right-5 w-8 h-8 rounded-full border border-white/10 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white transition-all cursor-pointer z-10">
                 <span class="material-symbols-outlined text-[18px]">close</span>
             </button>
             <div class="breathing-orb-container">
                 <div id="breathingOrb" class="breathing-orb"></div>
             </div>
-            <div id="breathingPhase" class="text-white font-display text-2xl font-bold tracking-wide mt-8 select-none">Get Ready</div>
-            <div id="breathingTimer" class="text-on-surface-variant text-sm font-label mt-2 select-none">Press start to begin</div>
+            <div id="breathingPhase" class="text-white font-display text-2xl font-bold tracking-wide mt-8 select-none">
+                Get Ready</div>
+            <div id="breathingTimer" class="text-on-surface-variant text-sm font-label mt-2 select-none">Press start to
+                begin</div>
             <div class="flex gap-4 mt-8">
-                <button id="startBreathingBtn" class="px-8 py-3 bg-primary text-on-primary font-semibold text-xs rounded-full hover:bg-primary-fixed-dim transition-all shadow-md shadow-primary/20">Start Breathing</button>
+                <button id="startBreathingBtn"
+                    class="px-8 py-3 bg-primary text-on-primary font-semibold text-xs rounded-full hover:bg-primary-fixed-dim transition-all shadow-md shadow-primary/20">Start
+                    Breathing</button>
             </div>
-            <div id="breathingCycles" class="text-[10px] text-on-surface-variant/60 mt-4 select-none">3 cycles · 36 seconds</div>
+            <div id="breathingCycles" class="text-[10px] text-on-surface-variant/60 mt-4 select-none">3 cycles · 36
+                seconds</div>
         </div>
     </div>
 
