@@ -1,3 +1,12 @@
+---
+title: Moodify AI
+emoji: 🎧
+colorFrom: green
+colorTo: black
+sdk: docker
+pinned: false
+---
+
 # 🎧 MOODIFY.ai
 
 ### AI Emotional Companion with Intelligent Music Therapy
