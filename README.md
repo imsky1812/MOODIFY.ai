@@ -2,7 +2,7 @@
 title: Moodify AI
 emoji: 🎧
 colorFrom: green
-colorTo: black
+colorTo: gray
 sdk: docker
 pinned: false
 ---
