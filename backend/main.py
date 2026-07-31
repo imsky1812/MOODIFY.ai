@@ -39,6 +39,7 @@ from conversation_memory import (
     message_count,
     set_score,
     get_score,
+    clear_memory,
 )
 
 from database import (
@@ -53,8 +54,6 @@ from database import (
     get_community_posts,
     clear_chat_history,
 )
-
-import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend"))
@@ -182,7 +181,7 @@ def auth_google(data: GoogleLoginInput, request: Request):
         raise HTTPException(status_code=400, detail="Invalid Google token")
             
     request.session["user"] = user_info
-    client_ip = request.client.host
+    client_ip = request.client.host if request.client else "unknown"
     log_user_login(user_info["email"], user_info["name"], client_ip)
     # Upsert user in SQLite database
     try:
@@ -234,15 +233,15 @@ def analyze_text(data: TextInput, user: dict = Depends(require_auth)):
 
     # 4. Wellbeing calculation & smoothing
     score = response.get("wellbeing_score")
-    previous_score = get_score()
+    previous_score = get_score(user_email=user_email)
 
     if score is not None:
         if previous_score is None:
-            set_score(score)
+            set_score(score, user_email=user_email)
             wellbeing = score
         else:
             smooth_score = int(previous_score * 0.7 + score * 0.3)
-            set_score(smooth_score)
+            set_score(smooth_score, user_email=user_email)
             wellbeing = smooth_score
     else:
         wellbeing = previous_score or 50
@@ -332,7 +331,8 @@ def stop_camera(user: dict = Depends(require_auth)):
 # ================= VOICE =================
 
 import tempfile
-import os
+from static_ffmpeg import run
+ffmpeg_bin, _ = run.get_or_fetch_platform_executables_else_raise()
 
 @app.post("/analyze-audio/")
 async def analyze_audio(audio: UploadFile = File(...), user: dict = Depends(require_auth)):
@@ -341,19 +341,28 @@ async def analyze_audio(audio: UploadFile = File(...), user: dict = Depends(requ
     wav_path = path[:-5] + ".wav"
     try:
         with os.fdopen(fd, 'wb') as f:
-            f.write(await audio.read())
+            content = await audio.read()
+            print(f"[Audio Endpoint] Received {len(content)} bytes of audio input")
+            f.write(content)
             
         # Convert webm to wav because SpeechRecognition requires PCM WAV
         result = subprocess.run(
-            ["ffmpeg", "-y", "-i", path, "-ac", "1", "-ar", "16000", wav_path],
-            stdout=subprocess.DEVNULL, 
+            [ffmpeg_bin, "-y", "-i", path, "-ac", "1", "-ar", "16000", wav_path],
+            stdout=subprocess.PIPE, 
             stderr=subprocess.PIPE
         )
         if result.returncode != 0:
+            print("[Audio Endpoint] FFmpeg conversion failed:")
             print("FFmpeg error:", result.stderr.decode('utf-8', errors='ignore'))
+        else:
+            if os.path.exists(wav_path):
+                print(f"[Audio Endpoint] FFmpeg conversion succeeded. WAV size: {os.path.getsize(wav_path)} bytes")
+            else:
+                print(f"[Audio Endpoint] FFmpeg returned 0, but WAV file does not exist at {wav_path}")
             
         from voice_emotion import speech_to_text
         text = speech_to_text(wav_path)
+        print(f"[Audio Endpoint] Speech-to-text recognized text: '{text}'")
         
         user_email = user.get("email")
         command = None
@@ -370,15 +379,15 @@ async def analyze_audio(audio: UploadFile = File(...), user: dict = Depends(requ
 
             # Wellbeing calculation & smoothing
             score = response.get("wellbeing_score")
-            previous_score = get_score()
+            previous_score = get_score(user_email=user_email)
 
             if score is not None:
                 if previous_score is None:
-                    set_score(score)
+                    set_score(score, user_email=user_email)
                     wellbeing = score
                 else:
                     smooth_score = int(previous_score * 0.7 + score * 0.3)
-                    set_score(smooth_score)
+                    set_score(smooth_score, user_email=user_email)
                     wellbeing = smooth_score
             else:
                 wellbeing = previous_score or 50
@@ -425,6 +434,8 @@ async def analyze_audio(audio: UploadFile = File(...), user: dict = Depends(requ
             
     except Exception as e:
         print("Audio error:", e)
+        import traceback
+        traceback.print_exc()
     finally:
         if os.path.exists(path):
             os.remove(path)
@@ -443,7 +454,7 @@ def stop_voice(user: dict = Depends(require_auth)):
 @app.get("/current-score")
 def current_score(user: dict = Depends(require_auth)):
 
-    score = get_score()
+    score = get_score(user_email=user.get("email"))
 
     if score is None:
         return {"score": "Start chatting to calculate"}
@@ -604,10 +615,8 @@ def api_clear_logs(user: dict = Depends(require_auth)):
     email = user.get("email")
     try:
         clear_chat_history(email)
-        # Also clear in-memory history to reset active chat context
-        from conversation_memory import conversation_history, set_score
-        conversation_history.clear()
-        set_score(None)
+        # Also clear this user's in-memory history to reset active chat context
+        clear_memory(user_email=email)
         return {"status": "success"}
     except Exception as e:
         print(f"[API Error] DELETE /api/logs: {e}")

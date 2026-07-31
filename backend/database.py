@@ -47,11 +47,6 @@ _NOUNS = [
 ]
 
 
-def _generate_alias() -> str:
-    """Generate a random anonymous alias like 'Serene Wave'."""
-    return f"{random.choice(_ADJECTIVES)} {random.choice(_NOUNS)}"
-
-
 def _generate_unique_anonymous_name(conn) -> str:
     """Generate a unique anonymous alias across all users, fallback to numbered suffix on collision."""
     for _ in range(10):

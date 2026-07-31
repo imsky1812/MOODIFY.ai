@@ -3,11 +3,15 @@ MOODIFY.ai — Conversation Memory Manager
 
 Maintains a fast in-memory deque for LLM context windows AND
 persists every message to the SQLite database via database.py.
-All functions accept an optional `user_email` parameter for per-user storage.
+
+Memory is isolated PER USER (keyed by user_email) so concurrent users
+never share conversation context or wellbeing scores. Callers that do
+not provide a user_email fall back to a shared anonymous bucket.
 """
 
-from collections import deque
+from collections import deque, defaultdict
 from datetime import datetime
+import threading
 
 from database import save_chat_message, get_chat_history as db_get_history
 
@@ -16,25 +20,36 @@ from database import save_chat_message, get_chat_history as db_get_history
 # Limit conversation history to prevent memory overflow
 MAX_HISTORY = 200
 
-# Thread-safe circular memory buffer (in-memory for LLM context speed)
-conversation_history = deque(maxlen=MAX_HISTORY)
+# Bucket used when no user_email is supplied (e.g. warmup/anonymous calls)
+_ANON_KEY = "__anonymous__"
 
-# Last wellbeing score
-last_score = None
+# Guards mutations of the per-user containers below
+_lock = threading.Lock()
+
+# Per-user circular memory buffers (in-memory for LLM context speed)
+_user_histories = defaultdict(lambda: deque(maxlen=MAX_HISTORY))
+
+# Per-user last wellbeing score
+_user_scores = {}
+
+
+def _key(user_email=None):
+    return user_email or _ANON_KEY
 
 
 # ================= ADD MESSAGE =================
 
 def add_user_message(text, user_email=None, wellbeing_score=None, detected_emotion=None):
     """Store user message in conversation history and persist to DB."""
-    
+
     message = {
         "role": "user",
         "text": text,
         "timestamp": datetime.utcnow()
     }
 
-    conversation_history.append(message)
+    with _lock:
+        _user_histories[_key(user_email)].append(message)
 
     # Persist to SQLite if user is identified
     if user_email:
@@ -46,14 +61,15 @@ def add_user_message(text, user_email=None, wellbeing_score=None, detected_emoti
 
 def add_assistant_message(text, user_email=None):
     """Store assistant message in conversation history and persist to DB."""
-    
+
     message = {
         "role": "assistant",
         "text": text,
         "timestamp": datetime.utcnow()
     }
 
-    conversation_history.append(message)
+    with _lock:
+        _user_histories[_key(user_email)].append(message)
 
     # Persist to SQLite if user is identified
     if user_email:
@@ -67,14 +83,15 @@ def add_assistant_message(text, user_email=None):
 
 def get_history(user_email=None):
     """Return messages formatted for the LLM API.
-    
-    If user_email is provided and in-memory is empty, 
+
+    If user_email is provided and in-memory is empty,
     fall back to DB for context continuity across restarts.
     """
-    
-    if len(conversation_history) > 0:
-        return [{"role": msg["role"], "content": msg["text"]} for msg in conversation_history]
-    
+
+    history = _user_histories.get(_key(user_email))
+    if history and len(history) > 0:
+        return [{"role": msg["role"], "content": msg["text"]} for msg in history]
+
     # Fall back to DB for returning users with empty in-memory buffer
     if user_email:
         try:
@@ -82,37 +99,49 @@ def get_history(user_email=None):
             return [{"role": r["role"], "content": r["text"]} for r in db_rows]
         except Exception as e:
             print(f"[DB Warning] Failed to load history from DB: {e}")
-    
+
     return []
 
 
 # ================= MESSAGE COUNT =================
 
-def message_count():
-    """Total stored messages."""
-    
-    return len(conversation_history)
+def message_count(user_email=None):
+    """Total stored messages for a user."""
+
+    return len(_user_histories.get(_key(user_email), ()))
 
 
 # ================= LAST N MESSAGES =================
 
-def last_messages(n=10):
+def last_messages(n=10, user_email=None):
     """Return last N messages as role-prefixed text."""
-    
-    messages = list(conversation_history)[-n:]
+
+    messages = list(_user_histories.get(_key(user_email), ()))[-n:]
     return [f"{msg['role']}: {msg['text']}" for msg in messages]
 
 
 # ================= WELLBEING SCORE =================
 
-def set_score(score):
-    """Store last calculated wellbeing score."""
-    
-    global last_score
-    last_score = score
+def set_score(score, user_email=None):
+    """Store last calculated wellbeing score for a user."""
+
+    with _lock:
+        _user_scores[_key(user_email)] = score
 
 
-def get_score():
-    """Retrieve last wellbeing score."""
-    
-    return last_score
+def get_score(user_email=None):
+    """Retrieve last wellbeing score for a user."""
+
+    return _user_scores.get(_key(user_email))
+
+
+# ================= CLEAR MEMORY =================
+
+def clear_memory(user_email=None):
+    """Reset in-memory chat context and wellbeing score for a user."""
+
+    key = _key(user_email)
+    with _lock:
+        if key in _user_histories:
+            _user_histories[key].clear()
+        _user_scores.pop(key, None)

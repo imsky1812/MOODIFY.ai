@@ -34,6 +34,7 @@ langdetect
 
 # ── Text-to-Speech (Edge TTS) ──
 edge-tts
+static-ffmpeg
 
 # ── Spotify Integration ──
 spotipy

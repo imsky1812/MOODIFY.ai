@@ -3,12 +3,16 @@ import edge_tts
 import threading
 import os
 import tempfile
-from playsound import playsound
+
+try:
+    from playsound import playsound
+except ImportError:
+    playsound = None
 
 # ================= ENGINE INIT =================
 
 _voice_lock = threading.Lock()
-VOICE_NAME = "en-IN-NeerjaNeural"
+VOICE_NAME = "en-IN-PrabhatNeural"
 # ================= SPEAK FUNCTION =================
 
 async def _save_audio(text, output_file):
@@ -22,6 +26,10 @@ def speak(text: str):
     Thread-safe and interrupt-safe.
     """
     if not text:
+        return
+
+    if playsound is None:
+        print("[Warning] playsound is not installed. Cannot play audio locally on the server.")
         return
 
     with _voice_lock:
