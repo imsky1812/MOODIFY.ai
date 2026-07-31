@@ -416,6 +416,169 @@ let cameraStateInterval = null;
 let cameraOpen = false;
 let videoStream = null;
 
+let targetRegion = null;
+let currentTargetRegion = null;
+let overlayOpacity = 0;
+let overlayAnimFrame = null;
+let scanLineY = 0;
+let scanDirection = 1;
+
+function drawSciFiOverlay() {
+    const canvas = document.getElementById("overlayCanvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    
+    const video = document.getElementById("videoFeed");
+    if (!video || video.paused || video.ended) {
+        overlayAnimFrame = requestAnimationFrame(drawSciFiOverlay);
+        return;
+    }
+    
+    // Ensure canvas dimensions match the displayed video box size
+    if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
+        canvas.width = video.clientWidth;
+        canvas.height = video.clientHeight;
+    }
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (targetRegion) {
+        // Fade in
+        overlayOpacity = Math.min(1, overlayOpacity + 0.15);
+        
+        // Interpolate current position towards target
+        if (!currentTargetRegion) {
+            currentTargetRegion = { ...targetRegion };
+        } else {
+            currentTargetRegion.x += (targetRegion.x - currentTargetRegion.x) * 0.15;
+            currentTargetRegion.y += (targetRegion.y - currentTargetRegion.y) * 0.15;
+            currentTargetRegion.w += (targetRegion.w - currentTargetRegion.w) * 0.15;
+            currentTargetRegion.h += (targetRegion.h - currentTargetRegion.h) * 0.15;
+        }
+    } else {
+        // Fade out
+        overlayOpacity = Math.max(0, overlayOpacity - 0.15);
+        if (overlayOpacity === 0) {
+            currentTargetRegion = null;
+        }
+    }
+    
+    if (currentTargetRegion && overlayOpacity > 0) {
+        // Translate coordinates from original video dimension to canvas dimension
+        const scaleX = canvas.width / (video.videoWidth || 640);
+        const scaleY = canvas.height / (video.videoHeight || 480);
+        
+        const x = currentTargetRegion.x * scaleX;
+        const y = currentTargetRegion.y * scaleY;
+        const w = currentTargetRegion.w * scaleX;
+        const h = currentTargetRegion.h * scaleY;
+        
+        ctx.save();
+        ctx.globalAlpha = overlayOpacity;
+        
+        // Define color based on detected emotion
+        const emotionText = (document.getElementById("camEmotion")?.textContent || "").trim().toLowerCase();
+        let hudColor = "rgba(0, 255, 65, 0.85)"; // Green by default (Matrix Style)
+        if (emotionText === "sad" || emotionText === "fear") {
+            hudColor = "rgba(0, 191, 255, 0.85)"; // Deep sky blue
+        } else if (emotionText === "angry") {
+            hudColor = "rgba(239, 68, 68, 0.85)"; // Red
+        } else if (emotionText === "happy") {
+            hudColor = "rgba(234, 179, 8, 0.85)"; // Yellow/Gold
+        } else if (emotionText === "surprise") {
+            hudColor = "rgba(168, 85, 247, 0.85)"; // Purple
+        }
+        
+        ctx.strokeStyle = hudColor;
+        ctx.fillStyle = hudColor;
+        ctx.lineWidth = 2;
+        
+        // 1. Draw Corner brackets
+        const bracketLength = Math.min(20, w * 0.2);
+        
+        // Top-left
+        ctx.beginPath();
+        ctx.moveTo(x, y + bracketLength);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x + bracketLength, y);
+        ctx.stroke();
+        
+        // Top-right
+        ctx.beginPath();
+        ctx.moveTo(x + w - bracketLength, y);
+        ctx.lineTo(x + w, y);
+        ctx.lineTo(x + w, y + bracketLength);
+        ctx.stroke();
+        
+        // Bottom-left
+        ctx.beginPath();
+        ctx.moveTo(x, y + h - bracketLength);
+        ctx.lineTo(x, y + h);
+        ctx.lineTo(x + bracketLength, y + h);
+        ctx.stroke();
+        
+        // Bottom-right
+        ctx.beginPath();
+        ctx.moveTo(x + w - bracketLength, y + h);
+        ctx.lineTo(x + w, y + h);
+        ctx.lineTo(x + w, y + h - bracketLength);
+        ctx.stroke();
+        
+        // 2. Draw outer bounding box (very faint dotted line)
+        ctx.strokeStyle = hudColor.replace("0.85", "0.15");
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(x, y, w, h);
+        ctx.setLineDash([]);
+        
+        // 3. Draw moving scanning line inside box
+        scanLineY += 1.5 * scanDirection;
+        if (scanLineY > h) {
+            scanLineY = h;
+            scanDirection = -1;
+        } else if (scanLineY < 0) {
+            scanLineY = 0;
+            scanDirection = 1;
+        }
+        
+        ctx.beginPath();
+        ctx.strokeStyle = hudColor.replace("0.85", "0.4");
+        ctx.moveTo(x + 2, y + scanLineY);
+        ctx.lineTo(x + w - 2, y + scanLineY);
+        ctx.stroke();
+        
+        // Draw glow under scanline
+        const grad = ctx.createLinearGradient(x, y + scanLineY - 6 * scanDirection, x, y + scanLineY);
+        grad.addColorStop(0, "transparent");
+        grad.addColorStop(1, hudColor.replace("0.85", "0.15"));
+        ctx.fillStyle = grad;
+        if (scanDirection === 1) {
+            ctx.fillRect(x + 2, y + scanLineY - 12, w - 4, 12);
+        } else {
+            ctx.fillRect(x + 2, y + scanLineY, w - 4, 12);
+        }
+        
+        // 4. Draw Sci-Fi scanner text above box
+        ctx.font = "bold 9px monospace";
+        ctx.fillStyle = hudColor;
+        const textLabel = `[ LOCKING TARGET: ${(emotionText && emotionText !== "--" ? emotionText : "DETECTING").toUpperCase()} ]`;
+        ctx.fillText(textLabel, x, y - 8);
+        
+        // 5. Draw crosshair in the center
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        ctx.strokeStyle = hudColor.replace("0.85", "0.4");
+        ctx.beginPath();
+        ctx.moveTo(cx - 5, cy); ctx.lineTo(cx + 5, cy);
+        ctx.moveTo(cx, cy - 5); ctx.lineTo(cx, cy + 5);
+        ctx.stroke();
+        
+        ctx.restore();
+    }
+    
+    overlayAnimFrame = requestAnimationFrame(drawSciFiOverlay);
+}
+
 async function openCamera() {
     if (cameraOpen) return;
     cameraOpen = true;
@@ -434,10 +597,14 @@ async function openCamera() {
             videoCanvas.width = videoFeed.videoWidth;
             videoCanvas.height = videoFeed.videoHeight;
 
+            // Start HUD Overlay loop
+            if (overlayAnimFrame) cancelAnimationFrame(overlayAnimFrame);
+            overlayAnimFrame = requestAnimationFrame(drawSciFiOverlay);
+
             // Poll emotion state by sending frame every 2 seconds
+            const frameCtx = videoCanvas.getContext("2d");
             cameraStateInterval = setInterval(async () => {
-                const ctx = videoCanvas.getContext("2d");
-                ctx.drawImage(videoFeed, 0, 0, videoCanvas.width, videoCanvas.height);
+                frameCtx.drawImage(videoFeed, 0, 0, videoCanvas.width, videoCanvas.height);
                 const b64_img = videoCanvas.toDataURL("image/jpeg", 0.6);
 
                 try {
@@ -448,6 +615,9 @@ async function openCamera() {
                     });
                     
                     const data = await res.json();
+                    
+                    // Update target region for HUD overlay
+                    targetRegion = data.region || null;
 
                     const emotionEl   = document.getElementById("camEmotion");
                     const wellbeingEl = document.getElementById("camWellbeing");
@@ -490,6 +660,20 @@ function closeCamera() {
 
     clearInterval(cameraStateInterval);
     cameraStateInterval = null;
+    
+    // Stop HUD Overlay loop and clear canvas
+    if (overlayAnimFrame) {
+        cancelAnimationFrame(overlayAnimFrame);
+        overlayAnimFrame = null;
+    }
+    const canvas = document.getElementById("overlayCanvas");
+    if (canvas) {
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    targetRegion = null;
+    currentTargetRegion = null;
+    overlayOpacity = 0;
     
     fetch("/stop-camera").catch(() => {});
 }
@@ -556,7 +740,42 @@ async function stopVoiceSession() {
         micStream.getTracks().forEach(t => t.stop());
         micStream = null;
     }
+
+    // Release the AudioContext so repeated sessions don't leak contexts
+    // (browsers cap the number of live AudioContexts per page).
+    if (audioContext) {
+        try { audioContext.close(); } catch (e) { /* already closed */ }
+        audioContext = null;
+        analyser = null;
+        microphone = null;
+    }
+
     resetVoiceUI();
+}
+
+let originalSpotifyVolume = 0.6;
+
+function duckSpotifyVolume() {
+    if (spotifyPlayer) {
+        try {
+            const volumeSlider = document.getElementById("volumeSlider");
+            const currentVol = volumeSlider ? parseFloat(volumeSlider.value) / 100 : 0.6;
+            originalSpotifyVolume = currentVol;
+            spotifyPlayer.setVolume(0.15).catch(err => console.error("Spotify duck volume error:", err));
+        } catch (err) {
+            console.error("Ducking error:", err);
+        }
+    }
+}
+
+function restoreSpotifyVolume() {
+    if (spotifyPlayer) {
+        try {
+            spotifyPlayer.setVolume(originalSpotifyVolume).catch(err => console.error("Spotify restore volume error:", err));
+        } catch (err) {
+            console.error("Restore volume error:", err);
+        }
+    }
 }
 
 async function processAudioRecording() {
@@ -588,13 +807,32 @@ async function processAudioRecording() {
                searchAndPlay()
            }
            
+           // Duck Spotify volume before assistant speaks
+           duckSpotifyVolume();
+           
+           // Show captions of what the bot is speaking
+           voiceStatus.innerText = data.reply;
+           
            if (data.audio_b64) {
                const audio = new Audio("data:audio/mp3;base64," + data.audio_b64);
-               audio.onended = () => { isProcessingAudio = false; voiceStatus.innerText = "Speak when ready..."; };
-               audio.play().catch(e => { console.error("Audio playback failed:", e); isProcessingAudio = false; voiceStatus.innerText = "Speak when ready..."; });
+               audio.onended = () => { 
+                   restoreSpotifyVolume();
+                   isProcessingAudio = false; 
+                   voiceStatus.innerText = "Speak when ready..."; 
+               };
+               audio.play().catch(e => { 
+                   console.error("Audio playback failed:", e); 
+                   restoreSpotifyVolume();
+                   isProcessingAudio = false; 
+                   voiceStatus.innerText = "Speak when ready..."; 
+               });
            } else {
                const utterance = new SpeechSynthesisUtterance(data.reply);
-               utterance.onend = () => { isProcessingAudio = false; voiceStatus.innerText = "Speak when ready..."; };
+               utterance.onend = () => { 
+                   restoreSpotifyVolume();
+                   isProcessingAudio = false; 
+                   voiceStatus.innerText = "Speak when ready..."; 
+               };
                window.speechSynthesis.speak(utterance);
            }
         } else {
@@ -2031,14 +2269,21 @@ async function loadAnalytics(days = 30) {
                 }
             }
         } else {
-            if (avgEl) avgEl.textContent = "--";
-            if (msgsEl) msgsEl.textContent = "--";
-            if (trendEl) trendEl.textContent = "--";
+            if (avgEl) avgEl.textContent = "—";
+            if (msgsEl) msgsEl.textContent = "—";
+            if (trendEl) trendEl.textContent = "—";
         }
+
+        // Toggle empty state overlay when there is no wellbeing data yet
+        const hasData = scores.length > 0;
+        const emptyEl = document.getElementById("analyticsEmpty");
+        if (emptyEl) emptyEl.classList.toggle("hidden", hasData);
 
         // Render Chart
         const canvas = document.getElementById("wellbeingChart");
         if (!canvas) return;
+        // Hide the empty axis/gridlines so the empty-state message reads clean
+        canvas.style.opacity = hasData ? "1" : "0";
         const ctx = canvas.getContext("2d");
 
         if (wellbeingChart) {
@@ -2081,13 +2326,13 @@ async function loadAnalytics(days = 30) {
                 scales: {
                     x: {
                         grid: { color: "rgba(255,255,255,0.04)" },
-                        ticks: { color: "rgba(153,153,153,0.6)", font: { size: 10 } },
+                        ticks: { color: "rgba(190,190,190,0.75)", font: { size: 10 } },
                     },
                     y: {
                         min: 0,
                         max: 100,
                         grid: { color: "rgba(255,255,255,0.04)" },
-                        ticks: { color: "rgba(153,153,153,0.6)", font: { size: 10 }, stepSize: 25 },
+                        ticks: { color: "rgba(190,190,190,0.75)", font: { size: 10 }, stepSize: 25 },
                     }
                 },
                 interaction: { intersect: false, mode: "index" },
@@ -2182,10 +2427,21 @@ async function loadCommunityPosts() {
     const container = document.getElementById("communityPosts");
     if (!container) return;
 
+    // Show a loading placeholder immediately so the panel is never blank
+    // while the request is in flight.
+    if (!container.dataset.loaded) {
+        container.innerHTML = `
+            <div class="text-center py-16 text-on-surface-variant/60">
+                <span class="material-symbols-outlined text-[48px] mb-3 block opacity-30 animate-pulse">forum</span>
+                <p class="text-sm">Loading reflections…</p>
+            </div>`;
+    }
+
     try {
         const res = await fetch("/api/community/posts");
         const data = await res.json();
         const posts = data.posts || [];
+        container.dataset.loaded = "1";
 
         if (posts.length === 0) {
             container.innerHTML = `
@@ -2215,6 +2471,14 @@ async function loadCommunityPosts() {
         container.scrollTop = container.scrollHeight;
     } catch (e) {
         console.error("Failed to load community posts:", e);
+        // Never leave the panel blank — show a recoverable error state
+        if (!container.dataset.loaded) {
+            container.innerHTML = `
+                <div class="text-center py-16 text-on-surface-variant/60">
+                    <span class="material-symbols-outlined text-[48px] mb-3 block opacity-30">cloud_off</span>
+                    <p class="text-sm">Couldn't load reflections. Please try again.</p>
+                </div>`;
+        }
     }
 }
 
